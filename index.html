@@ -105,6 +105,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .ex-btn.auto .ex-lbl{color:#4A4A99}
 .ex-auto-tag{position:absolute;top:4px;right:4px;background:#9B9BD9;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:6px;line-height:1.4}
 
+.milk-row{display:flex;align-items:center;gap:10px}
+.milk-cups{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;background:#FFF8E7;border-radius:12px;padding:10px;border:1px solid #FFE8B8;min-height:48px}
+.milk-cup{font-size:24px;line-height:1;filter:grayscale(1) opacity(0.3);transition:all .25s cubic-bezier(.4,1.5,.6,1)}
+.milk-cup.on{filter:none;transform:scale(1.1)}
+.milk-cup.bonus{animation:milkBonus .6s ease}
+@keyframes milkBonus{0%{transform:scale(1.1)}50%{transform:scale(1.5) rotate(-10deg)}100%{transform:scale(1.1) rotate(0)}}
+.milk-extra{font-size:13px;font-weight:700;color:#FF8A4C;margin-left:4px}
+
 .cond-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .cond-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:8px 0;display:flex;justify-content:center;align-items:center;font-size:26px;line-height:1;transition:all .15s}
 .cond-btn:active{transform:scale(.9)}
@@ -437,13 +445,22 @@ const emptyDay = () => ({
   routines: { brushing: false, socks: false },
   homework: { math: 0, drawing: false },
   classes: {},
+  milk: 0,
 });
 
 // 점수별 콩알 개수
 const beansForScore = (score) => {
   if (score >= 100) return 2;
-  if (score >= 85) return 1;
+  if (score >= 90) return 1;
   return 0;
+};
+
+// 우유 점수: 1잔=1점, 3잔에서 보너스 +2 (3잔=5점)
+const milkScore = (n) => {
+  const cups = Math.max(0, n || 0);
+  let pts = cups;
+  if (cups >= 3) pts += 2;
+  return pts;
 };
 
 const calcScore = (data, dateKey) => {
@@ -460,36 +477,42 @@ const calcScore = (data, dateKey) => {
     else s += 4;
   }
 
-  // 식사 - 메인 3끼 (25점) + 간식+야식 보너스 (5점)
+  // 아침 루틴 (5점: 양치 + 양말 둘 다)
+  if (data.routines?.brushing && data.routines?.socks) s += 5;
+
+  // 식사 - 메인 3끼 (24점, 각 8점) + 간식+야식 보너스 (5점)
   const mainMeals = ['breakfast', 'lunch', 'dinner'];
   const mainCount = mainMeals.filter(k => data.meals?.[k]).length;
-  s += Math.round((mainCount / 3) * 25);
+  s += mainCount * 8;
   if (data.meals?.snack && data.meals?.snackPm) s += 5;
 
-  // 학원 (25점, 학원 없는 날 자동 만점)
+  // 학원 (20점, 학원 없는 날 자동 만점)
   const todayClasses = getClassesForDay(dateKey || todayKey());
   if (todayClasses.length === 0) {
-    s += 25;
+    s += 20;
   } else {
     const done = todayClasses.filter(c => data.classes?.[c]).length;
-    s += Math.round((done / todayClasses.length) * 25);
+    s += Math.round((done / todayClasses.length) * 20);
   }
 
-  // 숙제 (15점: 수학 10 + 그림 5)
-  s += Math.round(((data.homework?.math || 0) / 10) * 10);
-  s += data.homework?.drawing ? 5 : 0;
+  // 숙제 (수학 1페이지=1점 최대 10점, 그림 3점)
+  s += (data.homework?.math || 0);
+  s += data.homework?.drawing ? 3 : 0;
 
-  // 운동 보너스 (5점: 줄넘기 AND 하키연습 둘 다)
+  // 운동: 줄넘기+하키연습 둘 다 5점, 달리기 2점
   if (data.exercises?.jumprope && data.exercises?.hockeyPrac) s += 5;
+  if (data.exercises?.running) s += 2;
 
-  return Math.min(100, s);
+  // 기본 점수 100 cap, 그 위에 우유 점수 추가 (100점 초과 가능)
+  const baseScore = Math.min(100, s);
+  return baseScore + milkScore(data.milk);
 };
 
-const character = (s) => s >= 85 ? '🌳' : s >= 60 ? '🌿' : s >= 30 ? '🌱' : s >= 10 ? '🌰' : '😴';
+const character = (s) => s >= 90 ? '🌳' : s >= 60 ? '🌿' : s >= 30 ? '🌱' : s >= 10 ? '🌰' : '😴';
 const message = (s) =>
   s >= 100 ? '완벽한 100점! 🎉🫘🫘' :
-  s >= 85 ? '콩알 받았다! 🫘' :
-  s >= 80 ? '드라마 시청권 획득! 🎬' :
+  s >= 90 ? '콩알 받았다! 🫘' :
+  s >= 85 ? '드라마 시청권 획득! 🎬' :
   s >= 60 ? '좋아, 조금만 더!' :
   s >= 30 ? '조금만 더 채워보자' :
   s >= 10 ? '아직 시간 있어!' : '오늘 시작해볼까?';
@@ -599,6 +622,8 @@ function KidView({ setMode, showToast, sync }) {
   const mealCount = MEALS.filter(m => data.meals[m.key]).length;
   const mainMealCount = ['breakfast','lunch','dinner'].filter(k => data.meals?.[k]).length;
   const exerciseBonus = !!(data.exercises?.jumprope && data.exercises?.hockeyPrac);
+  const milkCups = data.milk || 0;
+  const milkPts = milkScore(milkCups);
   const todayClasses = getClassesForDay(today);
 
   // 콩알 (점수에서 derive — 점수 떨어지면 자동으로 같이 떨어짐)
@@ -620,11 +645,11 @@ function KidView({ setMode, showToast, sync }) {
     prevTodayBeansRef.current = todayBeans;
   }, [todayBeans]);
 
-  // 80점 드라마 시청권 축하 (80~84 구간에 처음 진입할 때)
+  // 85점 드라마 시청권 축하 (85~89 구간에 처음 진입할 때)
   const prevScoreRef = useRef(score);
   useEffect(() => {
     const prev = prevScoreRef.current;
-    if (prev < 80 && score >= 80 && score < 85) {
+    if (prev < 85 && score >= 85 && score < 90) {
       setDramaCelebrate(true);
       if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
     }
@@ -657,6 +682,12 @@ function KidView({ setMode, showToast, sync }) {
   const toggleDrawing = () => {
     save({ ...data, homework: { ...data.homework, drawing: !data.homework?.drawing } });
     if (navigator.vibrate) navigator.vibrate(10);
+  };
+  const adjustMilk = (delta) => {
+    const cur = data.milk || 0;
+    const next = Math.max(0, Math.min(10, cur + delta));
+    save({ ...data, milk: next });
+    if (navigator.vibrate) navigator.vibrate(8);
   };
 
   const longPressTimer = useRef(null);
@@ -697,7 +728,7 @@ function KidView({ setMode, showToast, sync }) {
                 ? '한 번에 100점! 콩알 2개!'
                 : celebrate.todayBeans === 2
                   ? '완벽한 100점! 콩알 +1'
-                  : '85점 넘었어! 대단해 👏'}
+                  : '90점 넘었어! 대단해 👏'}
             </div>
             <div className="bean-count-big">{celebrate.total}개</div>
             <div style={{fontSize:12,color:'#94806B',marginTop:4}}>총 모은 콩알</div>
@@ -706,13 +737,13 @@ function KidView({ setMode, showToast, sync }) {
         </div>
       )}
 
-      {/* 80점 드라마 시청권 축하 모달 */}
+      {/* 85점 드라마 시청권 축하 모달 */}
       {dramaCelebrate && (
         <div className="bean-overlay" onClick={() => setDramaCelebrate(null)}>
           <div className="bean-modal drama-modal" onClick={(e) => e.stopPropagation()}>
             <div className="bean-big">🎬</div>
             <div className="bean-title" style={{color:'#7E3FAB'}}>드라마 시청권 획득!</div>
-            <div className="bean-msg">80점 넘었어! 🎉<br/>이제 5점만 더 채우면 콩알이야!</div>
+            <div className="bean-msg">85점 넘었어! 🎉<br/>이제 5점만 더 채우면 콩알이야!</div>
             <button className="bean-close" style={{background:'#9B5DCB'}}
                     onClick={() => setDramaCelebrate(null)}>좋아!</button>
           </div>
@@ -754,9 +785,9 @@ function KidView({ setMode, showToast, sync }) {
         </div>
         <div className="score-msg">{message(score)}</div>
         <div className="score-bar">
-          <div className="score-bar-fill" style={{width:`${score}%`}}></div>
-          <div className="score-bar-mark" style={{left:'85%'}}></div>
-          <div className="score-mark-lbl" style={{left:'85%'}}>🫘</div>
+          <div className="score-bar-fill" style={{width:`${Math.min(100, score)}%`}}></div>
+          <div className="score-bar-mark" style={{left:'90%'}}></div>
+          <div className="score-mark-lbl" style={{left:'90%'}}>🫘</div>
           <div className="score-mark-lbl" style={{left:'100%',transform:'translateX(-100%)'}}>🫘🫘</div>
         </div>
       </div>
@@ -913,6 +944,31 @@ function KidView({ setMode, showToast, sync }) {
         </div>
       </div>
 
+      {/* 우유 (보너스) */}
+      <div className={`mission ${milkCups >= 3 ? 'done' : ''}`}>
+        <div className="mission-head">
+          <span className="mission-emoji">🥛</span>
+          <span className="mission-title">우유 (보너스)</span>
+          <span className="mission-meta">
+            {milkCups}잔 {milkPts > 0 && <span style={{color:'#3D7C3D'}}>(+{milkPts}점)</span>}
+          </span>
+          <span className="mission-star">⭐</span>
+        </div>
+        <div className="mission-sub">1잔당 +1점, 3잔 채우면 보너스 +2점!</div>
+        <div className="milk-row">
+          <button className="hw-btn" onClick={() => adjustMilk(-1)} disabled={milkCups === 0}>−</button>
+          <div className="milk-cups">
+            {[1,2,3,4,5].map(n => (
+              <span key={n} className={`milk-cup ${milkCups >= n ? 'on' : ''} ${n === 3 && milkCups >= 3 ? 'bonus' : ''}`}>
+                🥛
+              </span>
+            ))}
+            {milkCups > 5 && <span className="milk-extra">+{milkCups - 5}</span>}
+          </div>
+          <button className="hw-btn" onClick={() => adjustMilk(1)} disabled={milkCups === 10}>＋</button>
+        </div>
+      </div>
+
       {/* 컨디션 */}
       <div className={`mission ${data.condition ? 'done' : ''}`}>
         <div className="mission-head">
@@ -1046,7 +1102,7 @@ function WeekTab() {
       </div>
 
       <div className="stat-grid">
-        <StatCard label="평균 점수" value={stats.avgScore != null ? Math.round(stats.avgScore) : '—'} unit="/100" target="85+" good={stats.avgScore >= 85}/>
+        <StatCard label="평균 점수" value={stats.avgScore != null ? Math.round(stats.avgScore) : '—'} unit="/100" target="90+" good={stats.avgScore >= 90}/>
         <StatCard label="이번주 콩알" value={stats.weekBeans} unit="개" target="7+" good={stats.weekBeans >= 7}/>
         <StatCard label="평균 수면" value={stats.avgSleep != null ? stats.avgSleep.toFixed(1) : '—'} unit="h" target="9.0+" good={stats.avgSleep >= 9}/>
         <StatCard label="평균 칼로리" value={stats.avgKcal != null ? Math.round(stats.avgKcal).toLocaleString() : '—'} unit="kcal" target="3,000+" good={stats.avgKcal >= 3000}/>
@@ -1060,7 +1116,7 @@ function WeekTab() {
               <R.CartesianGrid strokeDasharray="2 4" stroke="#E8E3D6" vertical={false}/>
               <R.XAxis dataKey="day" tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false}/>
               <R.YAxis domain={[0,100]} tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false}/>
-              <R.ReferenceLine y={85} stroke="#B8860B" strokeDasharray="3 3"/>
+              <R.ReferenceLine y={90} stroke="#B8860B" strokeDasharray="3 3"/>
               <R.ReferenceLine y={100} stroke="#E89A0F" strokeDasharray="3 3"/>
               <R.Tooltip
                 contentStyle={{borderRadius:8,fontSize:12,border:'1px solid #E8E3D6'}}
@@ -1082,7 +1138,7 @@ function WeekTab() {
         </div>
         <div className="chart-legend">
           <span className="legend-dot" style={{background:'#E89A0F'}}></span><span style={{marginRight:10}}>🫘🫘 100점</span>
-          <span className="legend-dot" style={{background:'#F4C13D'}}></span><span style={{marginRight:10}}>🫘 85점+</span>
+          <span className="legend-dot" style={{background:'#F4C13D'}}></span><span style={{marginRight:10}}>🫘 90점+</span>
           <span className="legend-dot" style={{background:'#FFD89C'}}></span><span>미달</span>
         </div>
       </div>
