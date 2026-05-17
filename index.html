@@ -40,6 +40,20 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .bean-count-big{font-family:'Fraunces',serif;font-size:36px;font-weight:600;color:#B8860B;font-variant-numeric:tabular-nums}
 .bean-close{margin-top:16px;background:#FFB85C;color:#fff;padding:10px 24px;border-radius:12px;font-size:14px;font-weight:600}
 
+/* 비밀번호 모달 */
+.pw-modal{max-width:280px}
+.pw-emoji{font-size:48px;line-height:1;margin-bottom:8px}
+.pw-title{font-size:18px;font-weight:700;color:#5A4A3A}
+.pw-subtitle{font-size:13px;color:#94806B;margin-top:4px;margin-bottom:20px}
+.pw-dots{display:flex;justify-content:center;gap:14px;margin:8px 0 16px}
+.pw-dots.error{animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.pw-dot{width:16px;height:16px;border-radius:50%;background:#F0EAE0;border:2px solid #D8CFC0;transition:all .2s}
+.pw-dot.filled{background:#5A4A3A;border-color:#5A4A3A;transform:scale(1.1)}
+.pw-dots.error .pw-dot.filled{background:#C4654D;border-color:#C4654D}
+.pw-input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+.pw-error-msg{font-size:13px;color:#C4654D;margin-top:4px;font-weight:600}
+
 .kid-header{padding:24px 4px 16px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .kid-greeting{font-family:'Fraunces',serif;font-size:22px;font-weight:600;letter-spacing:-.3px}
 .kid-date{font-size:12px;color:#94806B;margin-top:2px}
@@ -84,13 +98,17 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .time-result-lbl{font-size:10px;opacity:.85;margin-top:2px;font-weight:600}
 
 .meal-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.meal-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s}
+.meal-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s;position:relative}
 .meal-btn:active{transform:scale(.95)}
 .meal-btn.checked{background:#E8F5E0;border-color:#A8D8A8;animation:pop .3s ease}
+.meal-btn.fast{background:#FFF1B8;border-color:#F4C13D;box-shadow:0 0 0 1px #F4C13D inset}
+.meal-fast{position:absolute;top:2px;right:3px;font-size:13px;animation:fastPop .5s ease}
+@keyframes fastPop{0%{transform:scale(0) rotate(-30deg)}60%{transform:scale(1.4) rotate(10deg)}100%{transform:scale(1) rotate(0)}}
 @keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
 .meal-emoji{font-size:22px;line-height:1}
 .meal-lbl{font-size:11px;font-weight:700;color:#5A4A3A}
 .meal-btn.checked .meal-lbl{color:#3D7C3D}
+.meal-btn.fast .meal-lbl{color:#B8860B;font-weight:700}
 
 .ex-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .ex-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:12px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s;position:relative}
@@ -455,6 +473,11 @@ const beansForScore = (score) => {
   return 0;
 };
 
+// ============================================================
+// 부모 화면 비밀번호 (4자리 숫자 - 여기서 변경 가능)
+// ============================================================
+const PARENT_PASSWORD = '0212';
+
 // 우유 점수: 1잔=1점, 3잔에서 보너스 +2 (3잔=5점)
 const milkScore = (n) => {
   const cups = Math.max(0, n || 0);
@@ -480,10 +503,14 @@ const calcScore = (data, dateKey) => {
   // 아침 루틴 (5점: 양치 + 양말 둘 다)
   if (data.routines?.brushing && data.routines?.socks) s += 5;
 
-  // 식사 - 메인 3끼 (24점, 각 8점) + 간식+야식 보너스 (5점)
+  // 식사 - 메인 3끼 (24점, 각 8점) + 아침/저녁 빠른 식사 보너스 (각 +1) + 간식+야식 보너스 (5점)
   const mainMeals = ['breakfast', 'lunch', 'dinner'];
-  const mainCount = mainMeals.filter(k => data.meals?.[k]).length;
-  s += mainCount * 8;
+  mainMeals.forEach(k => {
+    const v = data.meals?.[k];
+    if (v) s += 8;
+    // 아침/저녁 20분 내 (값이 2): 추가 1점
+    if ((k === 'breakfast' || k === 'dinner') && v === 2) s += 1;
+  });
   if (data.meals?.snack && data.meals?.snackPm) s += 5;
 
   // 학원 (20점, 학원 없는 날 자동 만점)
@@ -662,8 +689,17 @@ function KidView({ setMode, showToast, sync }) {
   };
 
   const toggleMeal = (key) => {
-    save({ ...data, meals: { ...data.meals, [key]: !data.meals[key] } });
-    if (navigator.vibrate) navigator.vibrate(10);
+    const cur = data.meals?.[key] || 0;
+    let next;
+    if (key === 'breakfast' || key === 'dinner') {
+      // 0(안 먹음) → 1(먹음) → 2(20분내 빠른 식사) → 0
+      next = (cur >= 2) ? 0 : (cur + 1);
+    } else {
+      // 0 ↔ 1 토글
+      next = cur ? 0 : 1;
+    }
+    save({ ...data, meals: { ...data.meals, [key]: next } });
+    if (navigator.vibrate) navigator.vibrate(next === 2 ? [10, 30, 20] : 10);
   };
   const toggleRoutine = (key) => {
     save({ ...data, routines: { ...data.routines, [key]: !data.routines?.[key] } });
@@ -690,15 +726,43 @@ function KidView({ setMode, showToast, sync }) {
     if (navigator.vibrate) navigator.vibrate(8);
   };
 
-  const longPressTimer = useRef(null);
-  const handleSecretDown = () => {
-    longPressTimer.current = setTimeout(() => {
-      if (navigator.vibrate) navigator.vibrate(30);
-      setMode('parent');
-    }, 1500);
+  // 부모 화면 비밀번호 모달
+  const [showPwModal, setShowPwModal] = useState(false);
+  const [pwInput, setPwInput] = useState('');
+  const [pwError, setPwError] = useState(false);
+  const pwInputRef = useRef(null);
+
+  const openPwModal = () => {
+    setPwInput('');
+    setPwError(false);
+    setShowPwModal(true);
+    setTimeout(() => pwInputRef.current?.focus(), 100);
   };
-  const handleSecretUp = () => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+  const closePwModal = () => {
+    setShowPwModal(false);
+    setPwInput('');
+    setPwError(false);
+  };
+  const checkPassword = (value) => {
+    if (value === PARENT_PASSWORD) {
+      if (navigator.vibrate) navigator.vibrate(30);
+      setShowPwModal(false);
+      setPwInput('');
+      setMode('parent');
+    } else {
+      setPwError(true);
+      if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
+      setTimeout(() => {
+        setPwInput('');
+        setPwError(false);
+      }, 600);
+    }
+  };
+  const onPwChange = (e) => {
+    const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+    setPwInput(v);
+    setPwError(false);
+    if (v.length === 4) checkPassword(v);
   };
 
   const routineDone = ROUTINES.filter(r => data.routines?.[r.key]).length;
@@ -750,6 +814,36 @@ function KidView({ setMode, showToast, sync }) {
         </div>
       )}
 
+      {/* 부모 화면 비밀번호 모달 */}
+      {showPwModal && (
+        <div className="bean-overlay" onClick={closePwModal}>
+          <div className="bean-modal pw-modal" onClick={(e) => { e.stopPropagation(); pwInputRef.current?.focus(); }}>
+            <div className="pw-emoji">🔒</div>
+            <div className="pw-title">부모 화면</div>
+            <div className="pw-subtitle">비밀번호 4자리를 입력하세요</div>
+            <div className={`pw-dots ${pwError ? 'error' : ''}`} onClick={() => pwInputRef.current?.focus()}>
+              {[0,1,2,3].map(i => (
+                <div key={i} className={`pw-dot ${pwInput.length > i ? 'filled' : ''}`}></div>
+              ))}
+            </div>
+            <input
+              ref={pwInputRef}
+              className="pw-input"
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={4}
+              value={pwInput}
+              onChange={onPwChange}
+              autoFocus
+            />
+            {pwError && <div className="pw-error-msg">틀렸어요</div>}
+            <button className="bean-close" style={{background:'#94806B'}}
+                    onClick={closePwModal}>닫기</button>
+          </div>
+        </div>
+      )}
+
       <div className="kid-header">
         <div>
           <div className="kid-greeting">안녕, 주완! 🌱</div>
@@ -765,15 +859,7 @@ function KidView({ setMode, showToast, sync }) {
               <span>🔥</span><span>{streak}일</span>
             </div>
           )}
-          <button
-            className="secret-btn"
-            onTouchStart={handleSecretDown}
-            onTouchEnd={handleSecretUp}
-            onTouchCancel={handleSecretUp}
-            onMouseDown={handleSecretDown}
-            onMouseUp={handleSecretUp}
-            onMouseLeave={handleSecretUp}
-          >⋯</button>
+          <button className="secret-btn" onClick={openPwModal}>⋯</button>
         </div>
       </div>
 
@@ -932,15 +1018,21 @@ function KidView({ setMode, showToast, sync }) {
           <span className="mission-meta">{mainMealCount}/3끼 · 간식 {(data.meals?.snack?1:0)+(data.meals?.snackPm?1:0)}/2</span>
           <span className="mission-star">⭐</span>
         </div>
+        <div className="mission-sub">아침·저녁 2번 누르면 ⚡ 20분 내 식사 +1점</div>
         <div className="meal-row">
-          {MEALS.map(m => (
-            <button key={m.key}
-                    className={`meal-btn ${data.meals[m.key] ? 'checked' : ''}`}
-                    onClick={() => toggleMeal(m.key)}>
-              <span className="meal-emoji">{m.emoji}</span>
-              <span className="meal-lbl">{m.label}</span>
-            </button>
-          ))}
+          {MEALS.map(m => {
+            const v = data.meals?.[m.key];
+            const isFast = (m.key === 'breakfast' || m.key === 'dinner') && v === 2;
+            return (
+              <button key={m.key}
+                      className={`meal-btn ${v ? 'checked' : ''} ${isFast ? 'fast' : ''}`}
+                      onClick={() => toggleMeal(m.key)}>
+                {isFast && <span className="meal-fast">⚡</span>}
+                <span className="meal-emoji">{m.emoji}</span>
+                <span className="meal-lbl">{m.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
