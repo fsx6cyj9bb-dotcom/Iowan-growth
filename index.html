@@ -138,6 +138,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .hw-btn:disabled{opacity:.3;color:#94806B}
 .hw-bar{flex:1;height:10px;background:#FFF0D8;border-radius:999px;overflow:hidden}
 .hw-bar-fill{height:100%;background:linear-gradient(90deg,#FFB85C,#FF8A4C);border-radius:999px;transition:width .4s cubic-bezier(.4,1.5,.6,1)}
+.hw-slider{-webkit-appearance:none;appearance:none;flex:1;height:14px;border-radius:999px;outline:none;margin:0;padding:0;cursor:pointer;-webkit-user-select:none;user-select:none}
+.hw-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:26px;height:26px;border-radius:50%;background:#FF8A4C;border:3px solid #fff;box-shadow:0 2px 6px rgba(255,138,76,.4);cursor:pointer}
+.hw-slider::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#FF8A4C;border:3px solid #fff;box-shadow:0 2px 6px rgba(255,138,76,.4);cursor:pointer}
+.hw-slider:active::-webkit-slider-thumb{transform:scale(1.15)}
 .hw-draw-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px;width:100%;transition:all .15s}
 .hw-draw-btn:active{transform:scale(.98)}
 .hw-draw-btn.checked{background:#E8F5E0;border-color:#A8D8A8}
@@ -367,12 +371,11 @@ const calcSleep = (b, w) => {
 };
 
 const MEALS = [
-  { key: 'breakfast',   label: '아침',   emoji: '🍳', kcal: 700 },
-  { key: 'snackAm',     label: '간식',   emoji: '🥜', kcal: 300 },
-  { key: 'lunch',       label: '점심',   emoji: '🍱', kcal: 800 },
-  { key: 'postWorkout', label: '운동후', emoji: '🥛', kcal: 400 },
-  { key: 'dinner',      label: '저녁',   emoji: '🍚', kcal: 700 },
-  { key: 'snackPm',     label: '야식',   emoji: '🍯', kcal: 200 },
+  { key: 'breakfast', label: '아침', emoji: '🍳', kcal: 700 },
+  { key: 'lunch',     label: '점심', emoji: '🍱', kcal: 800 },
+  { key: 'snack',     label: '간식', emoji: '🥜', kcal: 400 },
+  { key: 'dinner',    label: '저녁', emoji: '🍚', kcal: 700 },
+  { key: 'snackPm',   label: '야식', emoji: '🍯', kcal: 200 },
 ];
 const KCAL_TARGET = MEALS.reduce((s, m) => s + m.kcal, 0);
 
@@ -399,6 +402,7 @@ const CLASS_INFO = {
 };
 
 const WEEKDAY_CLASSES = {
+  0: ['writing'],            // 일
   1: ['piano', 'climbing'],
   2: ['english'],
   3: ['piano', 'writing'],
@@ -433,7 +437,7 @@ const calcScore = (data, dateKey) => {
   const sl = calcSleep(data.bedtime, data.wakeup);
   if (sl != null) s += sl >= 9 ? 20 : sl >= 8 ? 14 : sl >= 7 ? 8 : 4;
   const mealCount = MEALS.filter(m => data.meals?.[m.key]).length;
-  s += Math.round((mealCount / 6) * 20);
+  s += Math.round((mealCount / 5) * 20);
   if (data.exercise) s += data.exercise === 'rest' ? 10 : 15;
   if (data.condition) s += data.condition >= 4 ? 10 : data.condition >= 3 ? 7 : data.condition >= 2 ? 4 : 2;
   s += (data.routines?.brushing ? 5 : 0) + (data.routines?.socks ? 5 : 0);
@@ -764,7 +768,7 @@ function KidView({ setMode, showToast, sync }) {
           {EXERCISES.map(e => (
             <button key={e.key}
                     className={`ex-btn ${data.exercise === e.key ? 'active' : ''}`}
-                    onClick={() => save({...data, exercise: e.key})}>
+                    onClick={() => save({...data, exercise: data.exercise === e.key ? '' : e.key})}>
               <span className="ex-emoji">{e.emoji}</span>
               <span className="ex-lbl">{e.label}</span>
             </button>
@@ -787,9 +791,18 @@ function KidView({ setMode, showToast, sync }) {
           </div>
           <div className="hw-row">
             <button className="hw-btn" onClick={() => adjustMath(-1)} disabled={mathPages === 0}>−</button>
-            <div className="hw-bar">
-              <div className="hw-bar-fill" style={{width:`${(mathPages/10)*100}%`}}></div>
-            </div>
+            <input
+              type="range"
+              min="0"
+              max="10"
+              step="1"
+              value={mathPages}
+              className="hw-slider"
+              style={{
+                background: `linear-gradient(to right, #FFB85C 0%, #FF8A4C ${(mathPages/10)*100}%, #FFF0D8 ${(mathPages/10)*100}%, #FFF0D8 100%)`
+              }}
+              onChange={(e) => save({...data, homework: {...data.homework, math: parseInt(e.target.value)}})}
+            />
             <button className="hw-btn" onClick={() => adjustMath(1)} disabled={mathPages === 10}>＋</button>
           </div>
         </div>
@@ -806,11 +819,11 @@ function KidView({ setMode, showToast, sync }) {
       </div>
 
       {/* 식사 */}
-      <div className={`mission ${mealCount === 6 ? 'done' : ''}`}>
+      <div className={`mission ${mealCount === 5 ? 'done' : ''}`}>
         <div className="mission-head">
           <span className="mission-emoji">🍽️</span>
           <span className="mission-title">든든하게 먹기</span>
-          <span className="mission-meta">{mealCount}/6</span>
+          <span className="mission-meta">{mealCount}/5</span>
           <span className="mission-star">⭐</span>
         </div>
         <div className="meal-row">
@@ -836,7 +849,7 @@ function KidView({ setMode, showToast, sync }) {
           {COND.map((emoji, i) => (
             <button key={i}
                     className={`cond-btn ${data.condition === i + 1 ? 'active' : ''}`}
-                    onClick={() => save({...data, condition: i + 1})}>
+                    onClick={() => save({...data, condition: data.condition === i + 1 ? 0 : i + 1})}>
               {emoji}
             </button>
           ))}
