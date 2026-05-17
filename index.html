@@ -92,13 +92,18 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .meal-lbl{font-size:11px;font-weight:700;color:#5A4A3A}
 .meal-btn.checked .meal-lbl{color:#3D7C3D}
 
-.ex-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
-.ex-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s}
+.ex-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.ex-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:12px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s;position:relative}
 .ex-btn:active{transform:scale(.92)}
 .ex-btn.active{background:#FFE4D6;border-color:#FF8A4C}
-.ex-emoji{font-size:22px;line-height:1}
-.ex-lbl{font-size:10px;font-weight:700;color:#5A4A3A}
+.ex-btn.auto{background:#E8E8FA;border-color:#9B9BD9;cursor:default}
+.ex-btn.bonus{box-shadow:0 0 0 1px #F4C13D inset}
+.ex-btn.bonus.active{background:#FFF1B8;border-color:#F4C13D}
+.ex-emoji{font-size:24px;line-height:1}
+.ex-lbl{font-size:11px;font-weight:700;color:#5A4A3A}
 .ex-btn.active .ex-lbl{color:#C75D2C}
+.ex-btn.auto .ex-lbl{color:#4A4A99}
+.ex-auto-tag{position:absolute;top:4px;right:4px;background:#9B9BD9;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:6px;line-height:1.4}
 
 .cond-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .cond-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:8px 0;display:flex;justify-content:center;align-items:center;font-size:26px;line-height:1;transition:all .15s}
@@ -380,11 +385,12 @@ const MEALS = [
 const KCAL_TARGET = MEALS.reduce((s, m) => s + m.kcal, 0);
 
 const EXERCISES = [
-  { key: 'hockey',   label: '하키',   emoji: '🏒' },
-  { key: 'climbing', label: '클라이밍', emoji: '🧗' },
-  { key: 'running',  label: '달리기', emoji: '🏃' },
-  { key: 'other',    label: '기타',   emoji: '⚽' },
-  { key: 'rest',     label: '휴식',   emoji: '😌' },
+  { key: 'jumprope',   label: '줄넘기',   emoji: '🪀' },
+  { key: 'hockeyPrac', label: '하키연습', emoji: '🏑' },
+  { key: 'running',    label: '달리기',   emoji: '🏃' },
+  { key: 'hockey',     label: '하키',     emoji: '🏒' },
+  { key: 'climbing',   label: '클라이밍', emoji: '🧗' },
+  { key: 'other',      label: '기타',     emoji: '⚽' },
 ];
 const COND = ['😫', '😕', '😐', '🙂', '😄'];
 
@@ -394,20 +400,28 @@ const ROUTINES = [
 ];
 
 const CLASS_INFO = {
-  piano:    { label: '피아노',   emoji: '🎹' },
-  climbing: { label: '클라이밍', emoji: '🧗' },
-  english:  { label: '영어',     emoji: '🔤' },
-  writing:  { label: '논술',     emoji: '✍️' },
-  coding:   { label: '코딩',     emoji: '💻' },
+  piano:    { label: '피아노',     emoji: '🎹' },
+  climbing: { label: '클라이밍',   emoji: '🧗' },
+  english:  { label: '영어',       emoji: '🔤' },
+  writing:  { label: '논술',       emoji: '✍️' },
+  coding:   { label: '코딩',       emoji: '💻' },
+  hockey:   { label: '하키 학원',  emoji: '🏒' },
+};
+
+// 학원 → 운동 자동 체크 매핑
+const CLASS_TO_EXERCISE = {
+  hockey: 'hockey',
+  climbing: 'climbing',
 };
 
 const WEEKDAY_CLASSES = {
-  0: ['writing'],            // 일
+  0: ['writing', 'hockey'],  // 일
   1: ['piano', 'climbing'],
   2: ['english'],
   3: ['piano', 'writing'],
   4: ['english', 'coding'],
   5: ['piano', 'climbing'],
+  6: ['hockey'],             // 토
 };
 
 const getClassesForDay = (dateKey) => {
@@ -418,7 +432,8 @@ const getClassesForDay = (dateKey) => {
 const emptyDay = () => ({
   bedtime: '', wakeup: '',
   meals: Object.fromEntries(MEALS.map(m => [m.key, false])),
-  exercise: '', exerciseDuration: 0, condition: 0,
+  exercises: {},
+  condition: 0,
   routines: { brushing: false, socks: false },
   homework: { math: 0, drawing: false },
   classes: {},
@@ -434,22 +449,39 @@ const beansForScore = (score) => {
 const calcScore = (data, dateKey) => {
   if (!data) return 0;
   let s = 0;
+
+  // 잠 (20점 + 9.5h 보너스 5점 = 최대 25)
   const sl = calcSleep(data.bedtime, data.wakeup);
-  if (sl != null) s += sl >= 9 ? 20 : sl >= 8 ? 14 : sl >= 7 ? 8 : 4;
-  const mealCount = MEALS.filter(m => data.meals?.[m.key]).length;
-  s += Math.round((mealCount / 5) * 20);
-  if (data.exercise) s += data.exercise === 'rest' ? 10 : 15;
-  if (data.condition) s += data.condition >= 4 ? 10 : data.condition >= 3 ? 7 : data.condition >= 2 ? 4 : 2;
-  s += (data.routines?.brushing ? 5 : 0) + (data.routines?.socks ? 5 : 0);
-  s += Math.round(((data.homework?.math || 0) / 10) * 10);
-  s += data.homework?.drawing ? 5 : 0;
+  if (sl != null) {
+    if (sl >= 9.5) s += 25;
+    else if (sl >= 9) s += 20;
+    else if (sl >= 8) s += 14;
+    else if (sl >= 7) s += 8;
+    else s += 4;
+  }
+
+  // 식사 - 메인 3끼 (25점) + 간식+야식 보너스 (5점)
+  const mainMeals = ['breakfast', 'lunch', 'dinner'];
+  const mainCount = mainMeals.filter(k => data.meals?.[k]).length;
+  s += Math.round((mainCount / 3) * 25);
+  if (data.meals?.snack && data.meals?.snackPm) s += 5;
+
+  // 학원 (25점, 학원 없는 날 자동 만점)
   const todayClasses = getClassesForDay(dateKey || todayKey());
   if (todayClasses.length === 0) {
-    s += 10;
+    s += 25;
   } else {
     const done = todayClasses.filter(c => data.classes?.[c]).length;
-    s += Math.round((done / todayClasses.length) * 10);
+    s += Math.round((done / todayClasses.length) * 25);
   }
+
+  // 숙제 (15점: 수학 10 + 그림 5)
+  s += Math.round(((data.homework?.math || 0) / 10) * 10);
+  s += data.homework?.drawing ? 5 : 0;
+
+  // 운동 보너스 (5점: 줄넘기 AND 하키연습 둘 다)
+  if (data.exercises?.jumprope && data.exercises?.hockeyPrac) s += 5;
+
   return Math.min(100, s);
 };
 
@@ -457,6 +489,7 @@ const character = (s) => s >= 85 ? '🌳' : s >= 60 ? '🌿' : s >= 30 ? '🌱' 
 const message = (s) =>
   s >= 100 ? '완벽한 100점! 🎉🫘🫘' :
   s >= 85 ? '콩알 받았다! 🫘' :
+  s >= 80 ? '드라마 시청권 획득! 🎬' :
   s >= 60 ? '좋아, 조금만 더!' :
   s >= 30 ? '조금만 더 채워보자' :
   s >= 10 ? '아직 시간 있어!' : '오늘 시작해볼까?';
@@ -558,11 +591,14 @@ function KidView({ setMode, showToast, sync }) {
   const today = todayKey();
   const [data, setData] = useState(() => ({ ...emptyDay(), ...(ls.get(`daily:${today}`) || {}) }));
   const [celebrate, setCelebrate] = useState(null);
+  const [dramaCelebrate, setDramaCelebrate] = useState(null);
 
   const score = useMemo(() => calcScore(data, today), [data]);
   const streak = useMemo(() => calcStreak(), [data]);
   const sleep = calcSleep(data.bedtime, data.wakeup);
   const mealCount = MEALS.filter(m => data.meals[m.key]).length;
+  const mainMealCount = ['breakfast','lunch','dinner'].filter(k => data.meals?.[k]).length;
+  const exerciseBonus = !!(data.exercises?.jumprope && data.exercises?.hockeyPrac);
   const todayClasses = getClassesForDay(today);
 
   // 콩알 (점수에서 derive — 점수 떨어지면 자동으로 같이 떨어짐)
@@ -583,6 +619,17 @@ function KidView({ setMode, showToast, sync }) {
     }
     prevTodayBeansRef.current = todayBeans;
   }, [todayBeans]);
+
+  // 80점 드라마 시청권 축하 (80~84 구간에 처음 진입할 때)
+  const prevScoreRef = useRef(score);
+  useEffect(() => {
+    const prev = prevScoreRef.current;
+    if (prev < 80 && score >= 80 && score < 85) {
+      setDramaCelebrate(true);
+      if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
+    }
+    prevScoreRef.current = score;
+  }, [score]);
 
   const save = (newData) => {
     setData(newData);
@@ -655,6 +702,19 @@ function KidView({ setMode, showToast, sync }) {
             <div className="bean-count-big">{celebrate.total}개</div>
             <div style={{fontSize:12,color:'#94806B',marginTop:4}}>총 모은 콩알</div>
             <button className="bean-close" onClick={() => setCelebrate(null)}>좋아!</button>
+          </div>
+        </div>
+      )}
+
+      {/* 80점 드라마 시청권 축하 모달 */}
+      {dramaCelebrate && (
+        <div className="bean-overlay" onClick={() => setDramaCelebrate(null)}>
+          <div className="bean-modal drama-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="bean-big">🎬</div>
+            <div className="bean-title" style={{color:'#7E3FAB'}}>드라마 시청권 획득!</div>
+            <div className="bean-msg">80점 넘었어! 🎉<br/>이제 5점만 더 채우면 콩알이야!</div>
+            <button className="bean-close" style={{background:'#9B5DCB'}}
+                    onClick={() => setDramaCelebrate(null)}>좋아!</button>
           </div>
         </div>
       )}
@@ -758,21 +818,36 @@ function KidView({ setMode, showToast, sync }) {
       </div>
 
       {/* 운동 */}
-      <div className={`mission ${data.exercise ? 'done' : ''}`}>
+      <div className={`mission ${exerciseBonus ? 'done' : ''}`}>
         <div className="mission-head">
           <span className="mission-emoji">💪</span>
           <span className="mission-title">오늘 한 운동</span>
+          <span className="mission-meta">🎯 줄넘기+하키연습</span>
           <span className="mission-star">⭐</span>
         </div>
         <div className="ex-row">
-          {EXERCISES.map(e => (
-            <button key={e.key}
-                    className={`ex-btn ${data.exercise === e.key ? 'active' : ''}`}
-                    onClick={() => save({...data, exercise: data.exercise === e.key ? '' : e.key})}>
-              <span className="ex-emoji">{e.emoji}</span>
-              <span className="ex-lbl">{e.label}</span>
-            </button>
-          ))}
+          {EXERCISES.map(e => {
+            const autoChecked = !!(CLASS_TO_EXERCISE[e.key] === undefined ? false : data.classes?.[e.key]);
+            const userChecked = !!data.exercises?.[e.key];
+            const checked = autoChecked || userChecked;
+            const isBonus = e.key === 'jumprope' || e.key === 'hockeyPrac';
+            return (
+              <button key={e.key}
+                      className={`ex-btn ${checked ? 'active' : ''} ${autoChecked ? 'auto' : ''} ${isBonus ? 'bonus' : ''}`}
+                      onClick={() => {
+                        if (autoChecked) return; // 학원 자동 체크는 변경 불가
+                        save({
+                          ...data,
+                          exercises: { ...data.exercises, [e.key]: !data.exercises?.[e.key] }
+                        });
+                        if (navigator.vibrate) navigator.vibrate(10);
+                      }}>
+                <span className="ex-emoji">{e.emoji}</span>
+                <span className="ex-lbl">{e.label}</span>
+                {autoChecked && <span className="ex-auto-tag">학원</span>}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -819,11 +894,11 @@ function KidView({ setMode, showToast, sync }) {
       </div>
 
       {/* 식사 */}
-      <div className={`mission ${mealCount === 5 ? 'done' : ''}`}>
+      <div className={`mission ${mainMealCount === 3 ? 'done' : ''}`}>
         <div className="mission-head">
           <span className="mission-emoji">🍽️</span>
           <span className="mission-title">든든하게 먹기</span>
-          <span className="mission-meta">{mealCount}/5</span>
+          <span className="mission-meta">{mainMealCount}/3끼 · 간식 {(data.meals?.snack?1:0)+(data.meals?.snackPm?1:0)}/2</span>
           <span className="mission-star">⭐</span>
         </div>
         <div className="meal-row">
@@ -933,7 +1008,10 @@ function WeekTab() {
     const sleeps = valid.map(d => calcSleep(d.data.bedtime, d.data.wakeup)).filter(Boolean);
     const mealCounts = valid.map(d => MEALS.filter(m => d.data.meals?.[m.key]).length);
     const kcals = valid.map(d => MEALS.reduce((s, m) => s + (d.data.meals?.[m.key] ? m.kcal : 0), 0));
-    const exDays = valid.filter(d => d.data.exercise && d.data.exercise !== 'rest').length;
+    const exDays = valid.filter(d => {
+      const ex = d.data.exercises || {};
+      return Object.values(ex).some(v => v);
+    }).length;
     const scores = valid.map(d => calcScore(d.data, d.key));
     const weekBeans = scores.reduce((s, sc) => s + beansForScore(sc), 0);
     const perfectDays = scores.filter(s => s >= 100).length;
