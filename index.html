@@ -97,7 +97,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .time-result-num{font-family:'Fraunces',serif;font-size:24px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
 .time-result-lbl{font-size:10px;opacity:.85;margin-top:2px;font-weight:600}
 
-.meal-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.meal-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .meal-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s;position:relative}
 .meal-btn:active{transform:scale(.95)}
 .meal-btn.checked{background:#E8F5E0;border-color:#A8D8A8;animation:pop .3s ease}
@@ -139,10 +139,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .routine-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .routine-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .15s}
 .routine-btn:active{transform:scale(.96)}
-.routine-btn.checked{background:#E8F5E0;border-color:#A8D8A8;animation:pop .3s ease}
+.routine-btn.checked,.routine-btn.done{background:#E8F5E0;border-color:#A8D8A8;animation:pop .3s ease}
 .routine-emoji{font-size:28px;line-height:1}
 .routine-lbl{font-size:13px;font-weight:700;color:#5A4A3A}
-.routine-btn.checked .routine-lbl{color:#3D7C3D}
+.routine-btn.checked .routine-lbl,.routine-btn.done .routine-lbl{color:#3D7C3D}
+.routine-pts{font-size:10px;color:#94806B;font-weight:600}
+.routine-btn.done .routine-pts{color:#3D7C3D}
 
 .class-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .class-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:14px 8px;display:flex;align-items:center;gap:10px;transition:all .15s}
@@ -404,7 +406,6 @@ const calcSleep = (b, w) => {
 const MEALS = [
   { key: 'breakfast', label: '아침', emoji: '🍳', kcal: 700 },
   { key: 'lunch',     label: '점심', emoji: '🍱', kcal: 800 },
-  { key: 'snack',     label: '간식', emoji: '🥜', kcal: 400 },
   { key: 'dinner',    label: '저녁', emoji: '🍚', kcal: 700 },
   { key: 'snackPm',   label: '야식', emoji: '🍯', kcal: 200 },
 ];
@@ -423,6 +424,11 @@ const COND = ['😫', '😕', '😐', '🙂', '😄'];
 const ROUTINES = [
   { key: 'brushing', label: '양치하기', emoji: '🪥' },
   { key: 'socks',    label: '양말 신기', emoji: '🧦' },
+];
+
+const EVENING_ROUTINES = [
+  { key: 'shower', label: '샤워',  emoji: '🚿', points: 3 },
+  { key: 'lotion', label: '로션',  emoji: '🧴', points: 2 },
 ];
 
 const CLASS_INFO = {
@@ -461,15 +467,29 @@ const emptyDay = () => ({
   exercises: {},
   condition: 0,
   routines: { brushing: false, socks: false },
+  eveningRoutines: { shower: false, lotion: false },
   homework: { math: 0, drawing: false },
   classes: {},
   milk: 0,
+  eggs: 0,
+  protein: 0,
 });
 
 // 점수별 콩알 개수
-const beansForScore = (score) => {
-  if (score >= 100) return 2;
-  if (score >= 90) return 1;
+// 보상 자격: 숙제 조건
+const HOMEWORK_FOR_DRAMA_MATH = 5;
+const HOMEWORK_FOR_BEAN_MATH = 8;
+const HOMEWORK_FOR_2BEAN_MATH = 10;
+const meetsHomeworkForDrama = (data) =>
+  (data?.homework?.math || 0) >= HOMEWORK_FOR_DRAMA_MATH;
+const meetsHomeworkForBeans = (data) =>
+  (data?.homework?.math || 0) >= HOMEWORK_FOR_BEAN_MATH && !!data?.homework?.drawing;
+const meetsHomeworkFor2Beans = (data) =>
+  (data?.homework?.math || 0) >= HOMEWORK_FOR_2BEAN_MATH && !!data?.homework?.drawing;
+
+const beansForScore = (score, data) => {
+  if (score >= 95 && meetsHomeworkFor2Beans(data)) return 2;
+  if (score >= 90 && meetsHomeworkForBeans(data)) return 1;
   return 0;
 };
 
@@ -485,6 +505,15 @@ const milkScore = (n) => {
   if (cups >= 3) pts += 2;
   return pts;
 };
+// 삶은 계란 점수: 우유와 동일 (1알=1점, 3알=5점)
+const eggScore = (n) => {
+  const cnt = Math.max(0, n || 0);
+  let pts = cnt;
+  if (cnt >= 3) pts += 2;
+  return pts;
+};
+// 더단백 음료 점수: 1개=2점
+const proteinScore = (n) => Math.max(0, n || 0) * 2;
 
 const calcScore = (data, dateKey) => {
   if (!data) return 0;
@@ -503,7 +532,11 @@ const calcScore = (data, dateKey) => {
   // 아침 루틴 (5점: 양치 + 양말 둘 다)
   if (data.routines?.brushing && data.routines?.socks) s += 5;
 
-  // 식사 - 메인 3끼 (24점, 각 8점) + 아침/저녁 빠른 식사 보너스 (각 +1) + 간식+야식 보너스 (5점)
+  // 저녁 루틴: 샤워 3점 + 로션 2점
+  if (data.eveningRoutines?.shower) s += 3;
+  if (data.eveningRoutines?.lotion) s += 2;
+
+  // 식사 - 메인 3끼 (24점, 각 8점)
   const mainMeals = ['breakfast', 'lunch', 'dinner'];
   mainMeals.forEach(k => {
     const v = data.meals?.[k];
@@ -511,7 +544,6 @@ const calcScore = (data, dateKey) => {
     // 아침/저녁 20분 내 (값이 2): 추가 1점
     if ((k === 'breakfast' || k === 'dinner') && v === 2) s += 1;
   });
-  if (data.meals?.snack && data.meals?.snackPm) s += 5;
 
   // 학원 (20점, 학원 없는 날 자동 만점)
   const todayClasses = getClassesForDay(dateKey || todayKey());
@@ -530,19 +562,50 @@ const calcScore = (data, dateKey) => {
   if (data.exercises?.jumprope && data.exercises?.hockeyPrac) s += 5;
   if (data.exercises?.running) s += 2;
 
-  // 기본 점수 100 cap, 그 위에 우유 점수 추가 (100점 초과 가능)
+  // 기본 점수 100 cap, 그 위에 우유 + 계란 + 더단백 음료 점수 추가
   const baseScore = Math.min(100, s);
-  return baseScore + milkScore(data.milk);
+  return baseScore + milkScore(data.milk) + eggScore(data.eggs) + proteinScore(data.protein);
 };
 
 const character = (s) => s >= 90 ? '🌳' : s >= 60 ? '🌿' : s >= 30 ? '🌱' : s >= 10 ? '🌰' : '😴';
-const message = (s) =>
-  s >= 100 ? '완벽한 100점! 🎉🫘🫘' :
-  s >= 90 ? '콩알 받았다! 🫘' :
-  s >= 85 ? '드라마 시청권 획득! 🎬' :
-  s >= 60 ? '좋아, 조금만 더!' :
-  s >= 30 ? '조금만 더 채워보자' :
-  s >= 10 ? '아직 시간 있어!' : '오늘 시작해볼까?';
+const message = (s, data) => {
+  const math = data?.homework?.math || 0;
+  const draw = !!data?.homework?.drawing;
+
+  // 콩알 2개 자격 (95+ & 수학 10 & 그림)
+  if (s >= 95 && math >= HOMEWORK_FOR_2BEAN_MATH && draw) return '완벽! 콩알 2개! 🎉🫘🫘';
+
+  // 콩알 1개 자격
+  if (s >= 90 && math >= HOMEWORK_FOR_BEAN_MATH && draw) {
+    // 95+인데 콩알 2개 못 받은 경우: 안내
+    if (s >= 95 && math < HOMEWORK_FOR_2BEAN_MATH) {
+      const need = HOMEWORK_FOR_2BEAN_MATH - math;
+      return `콩알 1개! 수학 ${need}쪽 더 하면 콩알 2개! 🫘+`;
+    }
+    return '콩알 받았다! 🫘';
+  }
+
+  // 90+인데 콩알 자격 부족
+  if (s >= 90) {
+    const mathNeed = Math.max(0, HOMEWORK_FOR_BEAN_MATH - math);
+    if (mathNeed > 0 && !draw) return '숙제 끝내야 콩알이야! 📚';
+    if (mathNeed > 0) return `수학 ${mathNeed}쪽 더! 📐`;
+    if (!draw) return '그림 끝내야 콩알! 🎨';
+  }
+
+  // 드라마 자격
+  if (s >= 85 && math >= HOMEWORK_FOR_DRAMA_MATH) return '드라마 시청권 획득! 🎬';
+  if (s >= 85) {
+    const need = Math.max(0, HOMEWORK_FOR_DRAMA_MATH - math);
+    return `수학 ${need}쪽 더 해야 드라마! 📐`;
+  }
+
+  // 일반
+  if (s >= 60) return '좋아, 조금만 더!';
+  if (s >= 30) return '조금만 더 채워보자';
+  if (s >= 10) return '아직 시간 있어!';
+  return '오늘 시작해볼까?';
+};
 
 const calcStreak = () => {
   const today = new Date();
@@ -565,7 +628,7 @@ const countBeans = () => {
     const d = ls.get(k);
     if (!d) return;
     const dk = k.replace('daily:', '');
-    total += beansForScore(calcScore(d, dk));
+    total += beansForScore(calcScore(d, dk), d);
   });
   return total;
 };
@@ -651,10 +714,14 @@ function KidView({ setMode, showToast, sync }) {
   const exerciseBonus = !!(data.exercises?.jumprope && data.exercises?.hockeyPrac);
   const milkCups = data.milk || 0;
   const milkPts = milkScore(milkCups);
+  const eggCount = data.eggs || 0;
+  const eggPts = eggScore(eggCount);
+  const proteinCount = data.protein || 0;
+  const proteinPts = proteinScore(proteinCount);
   const todayClasses = getClassesForDay(today);
 
   // 콩알 (점수에서 derive — 점수 떨어지면 자동으로 같이 떨어짐)
-  const todayBeans = useMemo(() => beansForScore(score), [score]);
+  const todayBeans = useMemo(() => beansForScore(score, data), [score, data]);
   const beansCount = useMemo(() => countBeans(), [data]);
 
   // 콩알 획득 축하 (오늘 콩알 개수가 늘어났을 때만)
@@ -672,16 +739,16 @@ function KidView({ setMode, showToast, sync }) {
     prevTodayBeansRef.current = todayBeans;
   }, [todayBeans]);
 
-  // 85점 드라마 시청권 축하 (85~89 구간에 처음 진입할 때)
-  const prevScoreRef = useRef(score);
+  // 85점 드라마 시청권 축하 (점수 85~89 + 수학 5쪽 이상 자격에 처음 진입할 때)
+  const prevDramaEligibleRef = useRef(false);
   useEffect(() => {
-    const prev = prevScoreRef.current;
-    if (prev < 85 && score >= 85 && score < 90) {
+    const eligible = score >= 85 && score < 90 && meetsHomeworkForDrama(data);
+    if (!prevDramaEligibleRef.current && eligible) {
       setDramaCelebrate(true);
       if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
     }
-    prevScoreRef.current = score;
-  }, [score]);
+    prevDramaEligibleRef.current = eligible;
+  }, [score, data]);
 
   const save = (newData) => {
     setData(newData);
@@ -705,6 +772,10 @@ function KidView({ setMode, showToast, sync }) {
     save({ ...data, routines: { ...data.routines, [key]: !data.routines?.[key] } });
     if (navigator.vibrate) navigator.vibrate(10);
   };
+  const toggleEveningRoutine = (key) => {
+    save({ ...data, eveningRoutines: { ...data.eveningRoutines, [key]: !data.eveningRoutines?.[key] } });
+    if (navigator.vibrate) navigator.vibrate(10);
+  };
   const toggleClass = (key) => {
     save({ ...data, classes: { ...data.classes, [key]: !data.classes?.[key] } });
     if (navigator.vibrate) navigator.vibrate(10);
@@ -723,6 +794,18 @@ function KidView({ setMode, showToast, sync }) {
     const cur = data.milk || 0;
     const next = Math.max(0, Math.min(10, cur + delta));
     save({ ...data, milk: next });
+    if (navigator.vibrate) navigator.vibrate(8);
+  };
+  const adjustEgg = (delta) => {
+    const cur = data.eggs || 0;
+    const next = Math.max(0, Math.min(10, cur + delta));
+    save({ ...data, eggs: next });
+    if (navigator.vibrate) navigator.vibrate(8);
+  };
+  const adjustProtein = (delta) => {
+    const cur = data.protein || 0;
+    const next = Math.max(0, Math.min(5, cur + delta));
+    save({ ...data, protein: next });
     if (navigator.vibrate) navigator.vibrate(8);
   };
 
@@ -766,6 +849,7 @@ function KidView({ setMode, showToast, sync }) {
   };
 
   const routineDone = ROUTINES.filter(r => data.routines?.[r.key]).length;
+  const eveningDone = EVENING_ROUTINES.filter(r => data.eveningRoutines?.[r.key]).length;
   const classDone = todayClasses.filter(c => data.classes?.[c]).length;
   const mathPages = data.homework?.math || 0;
   const drawingDone = !!data.homework?.drawing;
@@ -782,16 +866,16 @@ function KidView({ setMode, showToast, sync }) {
             </div>
             <div className="bean-title">
               {celebrate.todayBeans === 2 && celebrate.gained === 2
-                ? '100점 달성! 🎉'
+                ? '콩알 2개 획득! 🎉'
                 : celebrate.todayBeans === 2
-                  ? '100점 보너스!'
+                  ? '콩알 2개 달성!'
                   : '콩알 1개 획득!'}
             </div>
             <div className="bean-msg">
               {celebrate.gained === 2
-                ? '한 번에 100점! 콩알 2개!'
+                ? '한 번에 콩알 2개! 대박! 🎉'
                 : celebrate.todayBeans === 2
-                  ? '완벽한 100점! 콩알 +1'
+                  ? '수학까지 완벽! 콩알 +1 🫘'
                   : '90점 넘었어! 대단해 👏'}
             </div>
             <div className="bean-count-big">{celebrate.total}개</div>
@@ -869,12 +953,12 @@ function KidView({ setMode, showToast, sync }) {
           <span className="score-num">{score}</span>
           <span className="score-unit">점</span>
         </div>
-        <div className="score-msg">{message(score)}</div>
+        <div className="score-msg">{message(score, data)}</div>
         <div className="score-bar">
           <div className="score-bar-fill" style={{width:`${Math.min(100, score)}%`}}></div>
           <div className="score-bar-mark" style={{left:'90%'}}></div>
           <div className="score-mark-lbl" style={{left:'90%'}}>🫘</div>
-          <div className="score-mark-lbl" style={{left:'100%',transform:'translateX(-100%)'}}>🫘🫘</div>
+          <div className="score-mark-lbl" style={{left:'95%',transform:'translateX(-50%)'}}>🫘🫘</div>
         </div>
       </div>
 
@@ -1015,7 +1099,7 @@ function KidView({ setMode, showToast, sync }) {
         <div className="mission-head">
           <span className="mission-emoji">🍽️</span>
           <span className="mission-title">든든하게 먹기</span>
-          <span className="mission-meta">{mainMealCount}/3끼 · 간식 {(data.meals?.snack?1:0)+(data.meals?.snackPm?1:0)}/2</span>
+          <span className="mission-meta">{mainMealCount}/3끼</span>
           <span className="mission-star">⭐</span>
         </div>
         <div className="mission-sub">아침·저녁 2번 누르면 ⚡ 20분 내 식사 +1점</div>
@@ -1058,6 +1142,75 @@ function KidView({ setMode, showToast, sync }) {
             {milkCups > 5 && <span className="milk-extra">+{milkCups - 5}</span>}
           </div>
           <button className="hw-btn" onClick={() => adjustMilk(1)} disabled={milkCups === 10}>＋</button>
+        </div>
+      </div>
+
+      {/* 삶은 계란 (보너스) */}
+      <div className={`mission ${eggCount >= 3 ? 'done' : ''}`}>
+        <div className="mission-head">
+          <span className="mission-emoji">🥚</span>
+          <span className="mission-title">삶은 계란 (보너스)</span>
+          <span className="mission-meta">
+            {eggCount}알 {eggPts > 0 && <span style={{color:'#3D7C3D'}}>(+{eggPts}점)</span>}
+          </span>
+          <span className="mission-star">⭐</span>
+        </div>
+        <div className="mission-sub">1알당 +1점, 3알 채우면 보너스 +2점!</div>
+        <div className="milk-row">
+          <button className="hw-btn" onClick={() => adjustEgg(-1)} disabled={eggCount === 0}>−</button>
+          <div className="milk-cups">
+            {[1,2,3,4,5].map(n => (
+              <span key={n} className={`milk-cup ${eggCount >= n ? 'on' : ''} ${n === 3 && eggCount >= 3 ? 'bonus' : ''}`}>
+                🥚
+              </span>
+            ))}
+            {eggCount > 5 && <span className="milk-extra">+{eggCount - 5}</span>}
+          </div>
+          <button className="hw-btn" onClick={() => adjustEgg(1)} disabled={eggCount === 10}>＋</button>
+        </div>
+      </div>
+
+      {/* 더단백 음료 (보너스) */}
+      <div className={`mission ${proteinCount >= 1 ? 'done' : ''}`}>
+        <div className="mission-head">
+          <span className="mission-emoji">💪</span>
+          <span className="mission-title">더단백 음료 (보너스)</span>
+          <span className="mission-meta">
+            {proteinCount}개 {proteinPts > 0 && <span style={{color:'#3D7C3D'}}>(+{proteinPts}점)</span>}
+          </span>
+        </div>
+        <div className="mission-sub">1개당 +2점!</div>
+        <div className="milk-row">
+          <button className="hw-btn" onClick={() => adjustProtein(-1)} disabled={proteinCount === 0}>−</button>
+          <div className="milk-cups">
+            {[1,2,3,4,5].map(n => (
+              <span key={n} className={`milk-cup ${proteinCount >= n ? 'on' : ''}`}>
+                🥤
+              </span>
+            ))}
+          </div>
+          <button className="hw-btn" onClick={() => adjustProtein(1)} disabled={proteinCount === 5}>＋</button>
+        </div>
+      </div>
+
+      {/* 저녁 루틴: 샤워 + 로션 */}
+      <div className={`mission ${eveningDone === 2 ? 'done' : ''}`}>
+        <div className="mission-head">
+          <span className="mission-emoji">🌙</span>
+          <span className="mission-title">자기 전 루틴</span>
+          <span className="mission-meta">{eveningDone}/2</span>
+          <span className="mission-star">⭐</span>
+        </div>
+        <div className="routine-row">
+          {EVENING_ROUTINES.map(r => (
+            <button key={r.key}
+                    className={`routine-btn ${data.eveningRoutines?.[r.key] ? 'done' : ''}`}
+                    onClick={() => toggleEveningRoutine(r.key)}>
+              <span className="routine-emoji">{r.emoji}</span>
+              <span className="routine-lbl">{r.label}</span>
+              <span className="routine-pts">+{r.points}점</span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -1161,8 +1314,8 @@ function WeekTab() {
       return Object.values(ex).some(v => v);
     }).length;
     const scores = valid.map(d => calcScore(d.data, d.key));
-    const weekBeans = scores.reduce((s, sc) => s + beansForScore(sc), 0);
-    const perfectDays = scores.filter(s => s >= 100).length;
+    const weekBeans = valid.reduce((s, d) => s + beansForScore(calcScore(d.data, d.key), d.data), 0);
+    const twoBeanDays = valid.filter(d => beansForScore(calcScore(d.data, d.key), d.data) === 2).length;
     const avg = (a) => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
     return {
       avgSleep: avg(sleeps),
@@ -1172,7 +1325,7 @@ function WeekTab() {
       exDays,
       validDays: valid.length,
       weekBeans,
-      perfectDays,
+      twoBeanDays,
     };
   }, [days]);
 
@@ -1181,7 +1334,7 @@ function WeekTab() {
     return {
       day: d.label,
       점수: sc,
-      콩알: beansForScore(sc),
+      콩알: d.data ? beansForScore(sc, d.data) : 0,
     };
   });
   const sleepData = days.map(d => ({ day: d.label, 수면: d.data ? calcSleep(d.data.bedtime, d.data.wakeup) : null }));
@@ -1190,7 +1343,7 @@ function WeekTab() {
   return (
     <div>
       <div style={{padding:'8px 4px 12px',fontSize:13,color:'#8B8478'}}>
-        {stats.validDays}일 기록 · 이번주 콩알 {stats.weekBeans}개 · 100점 {stats.perfectDays}일 · 운동 {stats.exDays}일
+        {stats.validDays}일 기록 · 이번주 콩알 {stats.weekBeans}개 · 콩알 2개 {stats.twoBeanDays}일 · 운동 {stats.exDays}일
       </div>
 
       <div className="stat-grid">
@@ -1209,7 +1362,7 @@ function WeekTab() {
               <R.XAxis dataKey="day" tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false}/>
               <R.YAxis domain={[0,100]} tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false}/>
               <R.ReferenceLine y={90} stroke="#B8860B" strokeDasharray="3 3"/>
-              <R.ReferenceLine y={100} stroke="#E89A0F" strokeDasharray="3 3"/>
+              <R.ReferenceLine y={95} stroke="#E89A0F" strokeDasharray="3 3"/>
               <R.Tooltip
                 contentStyle={{borderRadius:8,fontSize:12,border:'1px solid #E8E3D6'}}
                 formatter={(v, name, props) => {
@@ -1229,7 +1382,7 @@ function WeekTab() {
           </R.ResponsiveContainer>
         </div>
         <div className="chart-legend">
-          <span className="legend-dot" style={{background:'#E89A0F'}}></span><span style={{marginRight:10}}>🫘🫘 100점</span>
+          <span className="legend-dot" style={{background:'#E89A0F'}}></span><span style={{marginRight:10}}>🫘🫘 95점+</span>
           <span className="legend-dot" style={{background:'#F4C13D'}}></span><span style={{marginRight:10}}>🫘 90점+</span>
           <span className="legend-dot" style={{background:'#FFD89C'}}></span><span>미달</span>
         </div>
