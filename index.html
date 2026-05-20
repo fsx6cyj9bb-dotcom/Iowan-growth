@@ -151,7 +151,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .cond-btn:active{transform:scale(.9)}
 .cond-btn.active{background:#FFF1B8;border-color:#F4C13D;transform:scale(1.05)}
 
-.routine-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.routine-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.routine-row-2{grid-template-columns:1fr 1fr}
 .routine-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .15s}
 .routine-btn:active{transform:scale(.96)}
 .routine-btn.checked,.routine-btn.done{background:#E8F5E0;border-color:#A8D8A8;animation:pop .3s ease}
@@ -159,7 +160,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .routine-lbl{font-size:13px;font-weight:700;color:#5A4A3A}
 .routine-btn.checked .routine-lbl,.routine-btn.done .routine-lbl{color:#3D7C3D}
 .routine-pts{font-size:10px;color:#94806B;font-weight:600}
-.routine-btn.done .routine-pts{color:#3D7C3D}
+.routine-btn.checked .routine-pts,.routine-btn.done .routine-pts{color:#3D7C3D}
 
 .class-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .class-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:14px 8px;display:flex;align-items:center;gap:10px;transition:all .15s}
@@ -437,8 +438,9 @@ const EXERCISES = [
 const COND = ['😫', '😕', '😐', '🙂', '😄'];
 
 const ROUTINES = [
-  { key: 'brushing', label: '양치하기', emoji: '🪥' },
-  { key: 'socks',    label: '양말 신기', emoji: '🧦' },
+  { key: 'brushing', label: '양치하기',   emoji: '🪥', points: 2 },
+  { key: 'socks',    label: '양말 신기', emoji: '🧦', points: 2 },
+  { key: 'vitamin',  label: '비타민 2알', emoji: '💊', points: 1 },
 ];
 
 const EVENING_ROUTINES = [
@@ -481,7 +483,7 @@ const emptyDay = () => ({
   meals: Object.fromEntries(MEALS.map(m => [m.key, false])),
   exercises: {},
   condition: 0,
-  routines: { brushing: false, socks: false },
+  routines: { brushing: false, socks: false, vitamin: false },
   eveningRoutines: { shower: false, lotion: false },
   homework: { math: 0, drawing: false },
   classes: {},
@@ -552,8 +554,10 @@ const calcScore = (data, dateKey) => {
     else s += 4;
   }
 
-  // 아침 루틴 (5점: 양치 + 양말 둘 다)
-  if (data.routines?.brushing && data.routines?.socks) s += 5;
+  // 아침 루틴 (양치 2 + 양말 2 + 비타민 1 = 최대 5점, 개별 가산)
+  ROUTINES.forEach(r => {
+    if (data.routines?.[r.key]) s += (r.points || 0);
+  });
 
   // 저녁 루틴: 샤워 3점 + 로션 2점
   if (data.eveningRoutines?.shower) s += 3;
@@ -625,7 +629,7 @@ const message = (s, data) => {
 
   // 일반
   if (s >= 60) return '좋아, 조금만 더!';
-  if (s >= 45) return '아침 드라마 20분 가능! 🎬';
+  if (s >= 47) return '아침 드라마 20분 가능! 🎬';
   if (s >= 30) return '조금만 더 채워보자';
   if (s >= 10) return '아직 시간 있어!';
   return '오늘 시작해볼까?';
@@ -776,10 +780,10 @@ function KidView({ setMode, showToast, sync }) {
     prevDramaEligibleRef.current = eligible;
   }, [score, data]);
 
-  // 45점 아침 드라마 20분 축하 (점수 45점 처음 넘을 때)
+  // 47점 아침 드라마 20분 축하 (점수 47점 처음 넘을 때)
   const prevMorning45Ref = useRef(false);
   useEffect(() => {
-    const eligible = score >= 45;
+    const eligible = score >= 47;
     if (!prevMorning45Ref.current && eligible) {
       setMorningDramaCelebrate(true);
       if (navigator.vibrate) navigator.vibrate([30, 15, 30]);
@@ -935,13 +939,13 @@ function KidView({ setMode, showToast, sync }) {
         </div>
       )}
 
-      {/* 45점 아침 드라마 20분 축하 모달 */}
+      {/* 47점 아침 드라마 20분 축하 모달 */}
       {morningDramaCelebrate && (
         <div className="bean-overlay" onClick={() => setMorningDramaCelebrate(null)}>
           <div className="bean-modal drama-modal" onClick={(e) => e.stopPropagation()}>
             <div className="bean-big">🎬⏱️</div>
             <div className="bean-title" style={{color:'#7E3FAB'}}>아침 드라마 20분!</div>
-            <div className="bean-msg">45점 도달! 🎉<br/>20분만! 잘 다녀와 👋</div>
+            <div className="bean-msg">47점 도달! 🎉<br/>20분만! 잘 다녀와 👋</div>
             <button className="bean-close" style={{background:'#9B5DCB'}}
                     onClick={() => setMorningDramaCelebrate(null)}>고마워!</button>
           </div>
@@ -1040,8 +1044,8 @@ function KidView({ setMode, showToast, sync }) {
         <div className="score-msg">{message(score, data)}</div>
         <div className="score-bar">
           <div className="score-bar-fill" style={{width:`${Math.min(100, score)}%`}}></div>
-          <div className="score-bar-mark" style={{left:'45%',background:'#9B5DCB'}}></div>
-          <div className="score-mark-lbl" style={{left:'45%',color:'#9B5DCB'}}>🎬</div>
+          <div className="score-bar-mark" style={{left:'47%',background:'#9B5DCB'}}></div>
+          <div className="score-mark-lbl" style={{left:'47%',color:'#9B5DCB'}}>🎬</div>
           <div className="score-bar-mark" style={{left:'90%'}}></div>
           <div className="score-mark-lbl" style={{left:'90%'}}>🫘</div>
           <div className="score-mark-lbl" style={{left:'95%',transform:'translateX(-50%)'}}>🫘🫘</div>
@@ -1051,11 +1055,11 @@ function KidView({ setMode, showToast, sync }) {
       <div style={{height:12}}></div>
 
       {/* 아침 루틴 */}
-      <div className={`mission ${routineDone === 2 ? 'done' : ''}`}>
+      <div className={`mission ${routineDone === ROUTINES.length ? 'done' : ''}`}>
         <div className="mission-head">
           <span className="mission-emoji">🌅</span>
           <span className="mission-title">아침 루틴</span>
-          <span className="mission-meta">{routineDone}/2</span>
+          <span className="mission-meta">{routineDone}/{ROUTINES.length}</span>
           <span className="mission-star">⭐</span>
         </div>
         <div className="routine-row">
@@ -1065,6 +1069,7 @@ function KidView({ setMode, showToast, sync }) {
                     onClick={() => toggleRoutine(r.key)}>
               <span className="routine-emoji">{r.emoji}</span>
               <span className="routine-lbl">{r.label}</span>
+              <span className="routine-pts">+{r.points}점</span>
             </button>
           ))}
         </div>
@@ -1287,7 +1292,7 @@ function KidView({ setMode, showToast, sync }) {
           <span className="mission-meta">{eveningDone}/2</span>
           <span className="mission-star">⭐</span>
         </div>
-        <div className="routine-row">
+        <div className="routine-row routine-row-2">
           {EVENING_ROUTINES.map(r => (
             <button key={r.key}
                     className={`routine-btn ${data.eveningRoutines?.[r.key] ? 'done' : ''}`}
