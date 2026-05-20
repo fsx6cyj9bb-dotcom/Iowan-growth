@@ -59,8 +59,23 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .kid-date{font-size:12px;color:#94806B;margin-top:2px}
 .header-badges{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 
-.beans-badge{display:inline-flex;align-items:center;gap:4px;background:#FFF1B8;color:#B8860B;font-size:13px;font-weight:700;padding:6px 10px;border-radius:999px;border:1px solid #F4D77E;font-variant-numeric:tabular-nums}
+.beans-badge{display:inline-flex;align-items:center;gap:4px;background:#FFF1B8;color:#B8860B;font-size:13px;font-weight:700;padding:6px 10px;border-radius:999px;border:1px solid #F4D77E;font-variant-numeric:tabular-nums;cursor:pointer;transition:transform .15s}
+.beans-badge:active{transform:scale(.92);background:#FFE989}
 .beans-badge .b-emoji{font-size:14px}
+
+/* 보상 목록 */
+.rewards-modal{max-width:340px;text-align:center}
+.rewards-list{display:flex;flex-direction:column;gap:10px;margin:8px 0 14px;text-align:left}
+.reward-item{display:flex;gap:12px;align-items:center;background:#F0EAE0;border-radius:14px;padding:12px;border:2px solid #E0D8C8;transition:all .2s}
+.reward-item.on{background:#FFF1B8;border-color:#F4C13D;box-shadow:0 2px 8px rgba(244,193,61,0.25)}
+.reward-icon{font-size:30px;width:44px;height:44px;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.reward-item.on .reward-icon{background:#FFE989}
+.reward-body{flex:1;min-width:0}
+.reward-name{font-size:14px;font-weight:700;color:#2D3748}
+.reward-item.on .reward-name{color:#7E5C00}
+.reward-need{font-size:11px;color:#94806B;margin-top:2px}
+.reward-bar{height:6px;background:#fff;border-radius:999px;overflow:hidden;margin-top:6px}
+.reward-bar-fill{height:100%;background:linear-gradient(90deg,#F4C13D,#FFB85C);border-radius:999px;transition:width .6s ease}
 .sync-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:5px 8px;border-radius:999px;border:1px solid transparent;transition:all .2s}
 .sync-spin{display:inline-block;animation:spin360 1s linear infinite}
 @keyframes spin360{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
@@ -498,6 +513,14 @@ const beansForScore = (score, data) => {
 // ============================================================
 const PARENT_PASSWORD = '0212';
 
+// ============================================================
+// 콩알 보상 (개수 / 이름 / 이모지)
+// ============================================================
+const REWARDS = [
+  { beans: 10,  emoji: '📝', name: '숙제 1회 면제권' },
+  { beans: 100, emoji: '🎧', name: '에어팟 프로' },
+];
+
 // 우유 점수: 1잔=1점, 3잔에서 보너스 +2 (3잔=5점)
 const milkScore = (n) => {
   const cups = Math.max(0, n || 0);
@@ -602,6 +625,7 @@ const message = (s, data) => {
 
   // 일반
   if (s >= 60) return '좋아, 조금만 더!';
+  if (s >= 45) return '아침 드라마 20분 가능! 🎬';
   if (s >= 30) return '조금만 더 채워보자';
   if (s >= 10) return '아직 시간 있어!';
   return '오늘 시작해볼까?';
@@ -705,6 +729,8 @@ function KidView({ setMode, showToast, sync }) {
   const [data, setData] = useState(() => ({ ...emptyDay(), ...(ls.get(`daily:${today}`) || {}) }));
   const [celebrate, setCelebrate] = useState(null);
   const [dramaCelebrate, setDramaCelebrate] = useState(null);
+  const [morningDramaCelebrate, setMorningDramaCelebrate] = useState(null);
+  const [showRewards, setShowRewards] = useState(false);
 
   const score = useMemo(() => calcScore(data, today), [data]);
   const streak = useMemo(() => calcStreak(), [data]);
@@ -749,6 +775,17 @@ function KidView({ setMode, showToast, sync }) {
     }
     prevDramaEligibleRef.current = eligible;
   }, [score, data]);
+
+  // 45점 아침 드라마 20분 축하 (점수 45점 처음 넘을 때)
+  const prevMorning45Ref = useRef(false);
+  useEffect(() => {
+    const eligible = score >= 45;
+    if (!prevMorning45Ref.current && eligible) {
+      setMorningDramaCelebrate(true);
+      if (navigator.vibrate) navigator.vibrate([30, 15, 30]);
+    }
+    prevMorning45Ref.current = eligible;
+  }, [score]);
 
   const save = (newData) => {
     setData(newData);
@@ -898,6 +935,53 @@ function KidView({ setMode, showToast, sync }) {
         </div>
       )}
 
+      {/* 45점 아침 드라마 20분 축하 모달 */}
+      {morningDramaCelebrate && (
+        <div className="bean-overlay" onClick={() => setMorningDramaCelebrate(null)}>
+          <div className="bean-modal drama-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="bean-big">🎬⏱️</div>
+            <div className="bean-title" style={{color:'#7E3FAB'}}>아침 드라마 20분!</div>
+            <div className="bean-msg">45점 도달! 🎉<br/>20분만! 잘 다녀와 👋</div>
+            <button className="bean-close" style={{background:'#9B5DCB'}}
+                    onClick={() => setMorningDramaCelebrate(null)}>고마워!</button>
+          </div>
+        </div>
+      )}
+
+      {/* 콩알 보상 모달 */}
+      {showRewards && (
+        <div className="bean-overlay" onClick={() => setShowRewards(false)}>
+          <div className="bean-modal rewards-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="bean-big">🫘</div>
+            <div className="bean-title">콩알 보상</div>
+            <div className="bean-count-big" style={{marginTop:6}}>{beansCount}개</div>
+            <div style={{fontSize:12,color:'#94806B',marginTop:2,marginBottom:14}}>지금까지 모은 콩알</div>
+            <div className="rewards-list">
+              {REWARDS.map((r) => {
+                const unlocked = beansCount >= r.beans;
+                const left = Math.max(0, r.beans - beansCount);
+                const pct = Math.min(100, (beansCount / r.beans) * 100);
+                return (
+                  <div key={r.beans} className={`reward-item ${unlocked ? 'on' : ''}`}>
+                    <div className="reward-icon">{unlocked ? r.emoji : '🔒'}</div>
+                    <div className="reward-body">
+                      <div className="reward-name">{r.name}</div>
+                      <div className="reward-need">
+                        🫘 {r.beans}개 {unlocked ? <span style={{color:'#3D7C3D',fontWeight:700}}>· 받을 수 있어!</span> : <span>· {left}개 더!</span>}
+                      </div>
+                      <div className="reward-bar">
+                        <div className="reward-bar-fill" style={{width:`${pct}%`}}></div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <button className="bean-close" onClick={() => setShowRewards(false)}>닫기</button>
+          </div>
+        </div>
+      )}
+
       {/* 부모 화면 비밀번호 모달 */}
       {showPwModal && (
         <div className="bean-overlay" onClick={closePwModal}>
@@ -935,9 +1019,9 @@ function KidView({ setMode, showToast, sync }) {
         </div>
         <div className="header-badges">
           <SyncBadge sync={sync} />
-          <div className="beans-badge">
+          <button className="beans-badge" onClick={() => setShowRewards(true)}>
             <span className="b-emoji">🫘</span><span>{beansCount}</span>
-          </div>
+          </button>
           {streak > 0 && (
             <div className="streak">
               <span>🔥</span><span>{streak}일</span>
@@ -956,6 +1040,8 @@ function KidView({ setMode, showToast, sync }) {
         <div className="score-msg">{message(score, data)}</div>
         <div className="score-bar">
           <div className="score-bar-fill" style={{width:`${Math.min(100, score)}%`}}></div>
+          <div className="score-bar-mark" style={{left:'45%',background:'#9B5DCB'}}></div>
+          <div className="score-mark-lbl" style={{left:'45%',color:'#9B5DCB'}}>🎬</div>
           <div className="score-bar-mark" style={{left:'90%'}}></div>
           <div className="score-mark-lbl" style={{left:'90%'}}>🫘</div>
           <div className="score-mark-lbl" style={{left:'95%',transform:'translateX(-50%)'}}>🫘🫘</div>
