@@ -151,13 +151,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .cond-btn:active{transform:scale(.9)}
 .cond-btn.active{background:#FFF1B8;border-color:#F4C13D;transform:scale(1.05)}
 
-.routine-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.routine-row-2{grid-template-columns:1fr 1fr}
-.routine-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .15s}
+.routine-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.routine-row-2{grid-template-columns:1fr 1fr;gap:8px}
+.routine-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:12px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s}
 .routine-btn:active{transform:scale(.96)}
 .routine-btn.checked,.routine-btn.done{background:#E8F5E0;border-color:#A8D8A8;animation:pop .3s ease}
-.routine-emoji{font-size:28px;line-height:1}
-.routine-lbl{font-size:13px;font-weight:700;color:#5A4A3A}
+.routine-emoji{font-size:24px;line-height:1}
+.routine-row-2 .routine-emoji{font-size:28px}
+.routine-lbl{font-size:11px;font-weight:700;color:#5A4A3A;text-align:center;line-height:1.2}
+.routine-row-2 .routine-lbl{font-size:13px}
 .routine-btn.checked .routine-lbl,.routine-btn.done .routine-lbl{color:#3D7C3D}
 .routine-pts{font-size:10px;color:#94806B;font-weight:600}
 .routine-btn.checked .routine-pts,.routine-btn.done .routine-pts{color:#3D7C3D}
@@ -439,8 +441,9 @@ const COND = ['😫', '😕', '😐', '🙂', '😄'];
 
 const ROUTINES = [
   { key: 'brushing', label: '양치하기',   emoji: '🪥', points: 2 },
-  { key: 'socks',    label: '양말 신기', emoji: '🧦', points: 2 },
+  { key: 'socks',    label: '양말 신기', emoji: '🧦', points: 1 },
   { key: 'vitamin',  label: '비타민 2알', emoji: '💊', points: 1 },
+  { key: 'lotionAm', label: '로션 바르기', emoji: '🧴', points: 1 },
 ];
 
 const EVENING_ROUTINES = [
@@ -483,7 +486,7 @@ const emptyDay = () => ({
   meals: Object.fromEntries(MEALS.map(m => [m.key, false])),
   exercises: {},
   condition: 0,
-  routines: { brushing: false, socks: false, vitamin: false },
+  routines: { brushing: false, socks: false, vitamin: false, lotionAm: false },
   eveningRoutines: { shower: false, lotion: false },
   homework: { math: 0, drawing: false },
   classes: {},
