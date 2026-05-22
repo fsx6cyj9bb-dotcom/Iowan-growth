@@ -527,7 +527,7 @@ const emptyDay = () => ({
 
 // 점수별 콩알 개수
 // 보상 자격: 숙제 조건
-const HOMEWORK_FOR_DRAMA_MATH = 5;
+const HOMEWORK_FOR_DRAMA_MATH = 8;
 const HOMEWORK_FOR_BEAN_MATH = 8;
 const HOMEWORK_FOR_2BEAN_MATH = 10;
 const meetsHomeworkForDrama = (data) =>
@@ -654,7 +654,13 @@ const message = (s, data) => {
   }
 
   // 드라마 자격
-  if (s >= 85 && math >= HOMEWORK_FOR_DRAMA_MATH) return '드라마 시청권 획득! 🎬';
+  if (s >= 85 && math >= HOMEWORK_FOR_DRAMA_MATH) {
+    // 저녁 7시 이후엔 샤워 안 했으면 안내
+    const isEvening = new Date().getHours() >= 19;
+    const showerDone = !!data?.eveningRoutines?.shower;
+    if (isEvening && !showerDone) return '샤워하고 드라마 보자! 🚿';
+    return '드라마 시청권 획득! 🎬';
+  }
   if (s >= 85) {
     const need = Math.max(0, HOMEWORK_FOR_DRAMA_MATH - math);
     return `수학 ${need}쪽 더 해야 드라마! 📐`;
@@ -662,7 +668,8 @@ const message = (s, data) => {
 
   // 일반
   if (s >= 60) return '좋아, 조금만 더!';
-  if (s >= 47) return '아침 드라마 20분 가능! 🎬';
+  // 아침 드라마는 오전 10시 이전에만 안내
+  if (s >= 47 && new Date().getHours() < 10) return '아침 드라마 20분 가능! 🎬';
   if (s >= 30) return '조금만 더 채워보자';
   if (s >= 10) return '아직 시간 있어!';
   return '오늘 시작해볼까?';
@@ -835,10 +842,13 @@ function KidView({ setMode, showToast, sync }) {
     prevTodayBeansRef.current = todayBeans;
   }, [todayBeans]);
 
-  // 85점 드라마 시청권 축하 (점수 85~89 + 수학 5쪽 이상 자격에 처음 진입할 때)
+  // 85점 드라마 시청권 축하 (85~89 + 수학 8쪽 + 저녁 7시 이후엔 샤워까지 완료)
   const prevDramaEligibleRef = useRef(false);
   useEffect(() => {
-    const eligible = score >= 85 && score < 90 && meetsHomeworkForDrama(data);
+    const now = new Date();
+    const isEvening = now.getHours() >= 19;
+    const showerOK = !isEvening || !!data.eveningRoutines?.shower;
+    const eligible = score >= 85 && score < 90 && meetsHomeworkForDrama(data) && showerOK;
     if (!prevDramaEligibleRef.current && eligible) {
       setDramaCelebrate(true);
       if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
@@ -846,10 +856,11 @@ function KidView({ setMode, showToast, sync }) {
     prevDramaEligibleRef.current = eligible;
   }, [score, data]);
 
-  // 47점 아침 드라마 20분 축하 (점수 47점 처음 넘을 때)
+  // 47점 아침 드라마 20분 축하 (점수 47점 처음 넘을 때 + 오전 10시 이전에만)
   const prevMorning45Ref = useRef(false);
   useEffect(() => {
-    const eligible = score >= 47;
+    const beforeTen = new Date().getHours() < 10;
+    const eligible = score >= 47 && beforeTen;
     if (!prevMorning45Ref.current && eligible) {
       setMorningDramaCelebrate(true);
       if (navigator.vibrate) navigator.vibrate([30, 15, 30]);
