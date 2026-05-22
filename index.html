@@ -712,6 +712,18 @@ const migrateBestBeans = () => {
       ls.set(k, { ...d, bestBeans: earned });
     }
   });
+
+  // 수동 보정 (한 번만 실행) - 사용자가 점수 룰 변경 전에 얻은 콩알 보정
+  if (!ls.get('migrated:manual-fix-v1')) {
+    const fix = (date, beans) => {
+      const dayData = ls.get(`daily:${date}`);
+      if (dayData) {
+        ls.set(`daily:${date}`, { ...dayData, bestBeans: Math.max(dayData.bestBeans || 0, beans) });
+      }
+    };
+    fix('2026-05-20', 2);  // 5월 20일: 콩알 2개
+    ls.set('migrated:manual-fix-v1', { done: true });
+  }
 };
 
 const useToast = () => {
