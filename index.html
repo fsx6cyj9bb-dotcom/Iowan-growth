@@ -273,6 +273,36 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .loading-text{font-family:'Fraunces',serif;font-size:18px;color:#5A4A3A}
 
 .footer-hint{text-align:center;padding:20px 0 8px;font-size:11px;color:#A89B7A}
+
+/* 캘린더 */
+.cal-nav-btn{width:28px;height:28px;border-radius:8px;background:#F0EAE0;color:#5A4A3A;font-size:18px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-left:4px;line-height:1}
+.cal-nav-btn:active{transform:scale(.92);background:#E0D8C8}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:8px;margin-bottom:4px}
+.cal-weekday{text-align:center;font-size:11px;font-weight:700;color:#94806B;padding:4px 0}
+.cal-weekday.sun{color:#C4654D}
+.cal-weekday.sat{color:#3D6BC4}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-cell{aspect-ratio:1;border-radius:8px;border:1.5px solid transparent;background:#fff;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;padding:3px 1px 1px;font-size:10px;color:#5A4A3A;position:relative;transition:transform .15s}
+.cal-cell.empty{background:transparent;border:none}
+.cal-cell.future{opacity:.3;background:#FAF7EF}
+.cal-cell:not(:disabled):active{transform:scale(.92)}
+.cal-cell.has{cursor:pointer}
+.cal-cell.today{border-color:#FF8A4C;box-shadow:0 0 0 1px #FF8A4C inset}
+.cal-day-num{font-size:11px;font-weight:700;line-height:1}
+.cal-day-info{display:flex;flex-direction:column;align-items:center;line-height:1;margin-top:auto}
+.cal-bean{font-size:8px;line-height:1}
+.cal-score{font-size:9px;font-weight:700;color:#5A4A3A;font-variant-numeric:tabular-nums;line-height:1.1}
+
+/* 날짜 상세 모달 */
+.day-detail-modal{max-width:320px}
+.day-detail-date{font-size:13px;color:#94806B;text-align:center;font-weight:600}
+.day-detail-score{text-align:center;margin-top:6px;display:flex;align-items:baseline;justify-content:center}
+.day-detail-beans{text-align:center;font-size:14px;color:#B8860B;font-weight:700;margin-top:4px}
+.day-summary{margin-top:14px;background:#FAF7EF;border-radius:12px;padding:10px;text-align:left}
+.day-row{display:flex;justify-content:space-between;align-items:center;padding:6px 4px;border-bottom:1px solid #F0EAE0;font-size:13px}
+.day-row:last-child{border-bottom:none}
+.day-row-lbl{color:#5A4A3A;font-weight:600}
+.day-row-val{color:#2D3748;font-weight:700;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -653,15 +683,35 @@ const calcStreak = () => {
   return streak;
 };
 
+// 한번 받은 콩알은 영구 보존 (점수 룰 변경 영향 받지 않음)
+const calcBestBeans = (data, dateKey) => {
+  const sc = calcScore(data, dateKey);
+  const earned = beansForScore(sc, data);
+  return Math.max(data?.bestBeans || 0, earned);
+};
+
 const countBeans = () => {
   let total = 0;
   ls.keys('daily:').forEach(k => {
     const d = ls.get(k);
     if (!d) return;
     const dk = k.replace('daily:', '');
-    total += beansForScore(calcScore(d, dk), d);
+    total += calcBestBeans(d, dk);
   });
   return total;
+};
+
+// 옛 데이터에 bestBeans 필드 없으면 현재 콩알 수로 마이그레이션 (1회)
+const migrateBestBeans = () => {
+  ls.keys('daily:').forEach(k => {
+    const d = ls.get(k);
+    if (!d || d.bestBeans != null) return;
+    const dk = k.replace('daily:', '');
+    const earned = beansForScore(calcScore(d, dk), d);
+    if (earned > 0) {
+      ls.set(k, { ...d, bestBeans: earned });
+    }
+  });
 };
 
 const useToast = () => {
@@ -677,10 +727,11 @@ function App() {
   const [syncKey, setSyncKey] = useState(0); // 서버 데이터 적용 후 강제 리렌더
   const [sync, setSync] = useState({ status: 'idle', time: null });
 
-  // 초기 로드: 서버에서 데이터 끌어오기
+  // 초기 로드: 서버에서 데이터 끌어오기 + 옛 데이터 마이그레이션
   useEffect(() => {
     (async () => {
       await pullFromServer();
+      migrateBestBeans();
       setTimeout(() => setLoading(false), 200);
     })();
   }, []);
@@ -754,7 +805,7 @@ function KidView({ setMode, showToast, sync }) {
   const todayClasses = getClassesForDay(today);
 
   // 콩알 (점수에서 derive — 점수 떨어지면 자동으로 같이 떨어짐)
-  const todayBeans = useMemo(() => beansForScore(score, data), [score, data]);
+  const todayBeans = useMemo(() => calcBestBeans(data, today), [data, today]);
   const beansCount = useMemo(() => countBeans(), [data]);
 
   // 콩알 획득 축하 (오늘 콩알 개수가 늘어났을 때만)
@@ -795,8 +846,12 @@ function KidView({ setMode, showToast, sync }) {
   }, [score]);
 
   const save = (newData) => {
-    setData(newData);
-    ls.set(`daily:${today}`, newData);
+    // 현재 점수의 콩알이 기존 bestBeans보다 크면 업데이트 (한 번 받은 콩알은 안 사라지게)
+    const currentBeans = beansForScore(calcScore(newData, today), newData);
+    const bestBeans = Math.max(newData.bestBeans || 0, currentBeans);
+    const dataToSave = { ...newData, bestBeans };
+    setData(dataToSave);
+    ls.set(`daily:${today}`, dataToSave);
   };
 
   const toggleMeal = (key) => {
@@ -1352,7 +1407,9 @@ function KidView({ setMode, showToast, sync }) {
         </div>
       </div>
 
-      <div className="footer-hint">⋯ 버튼을 길게 누르면 부모 화면</div>
+      <MonthCalendar today={today} />
+
+      <div className="footer-hint">⋯ 버튼을 누르면 부모 화면</div>
     </div>
   );
 }
@@ -1408,8 +1465,8 @@ function WeekTab() {
       return Object.values(ex).some(v => v);
     }).length;
     const scores = valid.map(d => calcScore(d.data, d.key));
-    const weekBeans = valid.reduce((s, d) => s + beansForScore(calcScore(d.data, d.key), d.data), 0);
-    const twoBeanDays = valid.filter(d => beansForScore(calcScore(d.data, d.key), d.data) === 2).length;
+    const weekBeans = valid.reduce((s, d) => s + calcBestBeans(d.data, d.key), 0);
+    const twoBeanDays = valid.filter(d => calcBestBeans(d.data, d.key) === 2).length;
     const avg = (a) => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
     return {
       avgSleep: avg(sleeps),
@@ -1428,7 +1485,7 @@ function WeekTab() {
     return {
       day: d.label,
       점수: sc,
-      콩알: d.data ? beansForScore(sc, d.data) : 0,
+      콩알: d.data ? calcBestBeans(d.data, d.key) : 0,
     };
   });
   const sleepData = days.map(d => ({ day: d.label, 수면: d.data ? calcSleep(d.data.bedtime, d.data.wakeup) : null }));
@@ -1542,6 +1599,207 @@ function SyncBadge({ sync }) {
          title={time ? `마지막 동기화: ${new Date(time).toLocaleTimeString('ko-KR')}` : ''}>
       <span className={status === 'pulling' || status === 'pushing' ? 'sync-spin' : ''}>{icon}</span>
       <span>{label}</span>
+    </div>
+  );
+}
+
+// ============================================================
+// 월간 캘린더 - 날짜별 점수/콩알 시각화
+// ============================================================
+function MonthCalendar({ today }) {
+  const todayDate = new Date(today + 'T00:00:00');
+  const [viewYM, setViewYM] = useState(() => ({ y: todayDate.getFullYear(), m: todayDate.getMonth() })); // m: 0-11
+  const [selectedDate, setSelectedDate] = useState(null);
+
+  // 해당 월 데이터 로드
+  const monthData = useMemo(() => {
+    const data = {};
+    const ym = `${viewYM.y}-${String(viewYM.m + 1).padStart(2, '0')}`;
+    ls.keys('daily:').forEach(k => {
+      const dk = k.replace('daily:', '');
+      if (dk.startsWith(ym)) {
+        const d = ls.get(k);
+        if (d) data[dk] = d;
+      }
+    });
+    return data;
+  }, [viewYM]);
+
+  // 해당 월 정보
+  const firstDay = new Date(viewYM.y, viewYM.m, 1);
+  const lastDay = new Date(viewYM.y, viewYM.m + 1, 0);
+  const daysInMonth = lastDay.getDate();
+  const startWeekday = firstDay.getDay(); // 0:일 ~ 6:토
+
+  // 셀 생성 (7x6 = 42칸)
+  const cells = [];
+  for (let i = 0; i < startWeekday; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length < 42) cells.push(null);
+
+  const prevMonth = () => {
+    setViewYM(({ y, m }) => m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 });
+  };
+  const nextMonth = () => {
+    setViewYM(({ y, m }) => m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 });
+  };
+
+  const todayKeyStr = today;
+  const formatKey = (d) => `${viewYM.y}-${String(viewYM.m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const isFuture = (d) => formatKey(d) > todayKeyStr;
+
+  const handleCellClick = (d) => {
+    if (!d || isFuture(d)) return;
+    const key = formatKey(d);
+    const dayData = monthData[key];
+    if (!dayData) return;
+    setSelectedDate({ key, data: dayData });
+  };
+
+  // 점수에 따른 색상 (낮음: 옅음 → 높음: 짙음)
+  const scoreColor = (sc) => {
+    if (sc >= 95) return '#E89A0F';
+    if (sc >= 90) return '#F4C13D';
+    if (sc >= 85) return '#FFD580';
+    if (sc >= 60) return '#FFE8B8';
+    if (sc >= 30) return '#FFF1B8';
+    if (sc > 0)   return '#FFF8E7';
+    return '#fff';
+  };
+
+  const weekdayLbls = ['일','월','화','수','목','금','토'];
+
+  return (
+    <div className="mission">
+      <div className="mission-head">
+        <span className="mission-emoji">📅</span>
+        <span className="mission-title">{viewYM.y}년 {viewYM.m + 1}월</span>
+        <button className="cal-nav-btn" onClick={prevMonth}>‹</button>
+        <button className="cal-nav-btn" onClick={nextMonth}>›</button>
+      </div>
+      <div className="mission-sub">날짜를 누르면 그날 점수와 콩알을 볼 수 있어!</div>
+
+      <div className="cal-weekdays">
+        {weekdayLbls.map((lbl, i) => (
+          <div key={i} className={`cal-weekday ${i === 0 ? 'sun' : ''} ${i === 6 ? 'sat' : ''}`}>{lbl}</div>
+        ))}
+      </div>
+
+      <div className="cal-grid">
+        {cells.map((d, idx) => {
+          if (d == null) return <div key={idx} className="cal-cell empty"></div>;
+          const key = formatKey(d);
+          const dayData = monthData[key];
+          const sc = dayData ? calcScore(dayData, key) : 0;
+          const bn = dayData ? calcBestBeans(dayData, key) : 0;
+          const future = isFuture(d);
+          const isToday = key === todayKeyStr;
+          const hasData = !!dayData;
+          return (
+            <button key={idx}
+                    className={`cal-cell ${hasData ? 'has' : ''} ${future ? 'future' : ''} ${isToday ? 'today' : ''}`}
+                    style={{background: hasData ? scoreColor(sc) : undefined}}
+                    onClick={() => handleCellClick(d)}
+                    disabled={future || !hasData}>
+              <span className="cal-day-num">{d}</span>
+              {hasData && (
+                <span className="cal-day-info">
+                  {bn > 0 && <span className="cal-bean">{bn === 2 ? '🫘🫘' : '🫘'}</span>}
+                  <span className="cal-score">{sc}</span>
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 날짜 상세 모달 */}
+      {selectedDate && (
+        <DayDetailModal date={selectedDate.key} data={selectedDate.data}
+                        onClose={() => setSelectedDate(null)} />
+      )}
+    </div>
+  );
+}
+
+// 그날의 상세 보기 모달
+function DayDetailModal({ date, data, onClose }) {
+  const sc = calcScore(data, date);
+  const bn = calcBestBeans(data, date);
+  const sleepH = calcSleep(data.bedtime, data.wakeup);
+  const mainMeals = ['breakfast','lunch','dinner'].filter(k => data.meals?.[k]).length;
+  const fastMeals = ['breakfast','dinner'].filter(k => data.meals?.[k] === 2).length;
+  const mathP = data.homework?.math || 0;
+  const drawing = !!data.homework?.drawing;
+  const clss = getClassesForDay(date);
+  const classDone = clss.filter(c => data.classes?.[c]).length;
+  const exDone = Object.keys(data.exercises || {}).filter(k => data.exercises[k]).length;
+  const routineDone = ROUTINES.filter(r => data.routines?.[r.key]).length;
+  const eveDone = EVENING_ROUTINES.filter(r => data.eveningRoutines?.[r.key]).length;
+  const milk = data.milk || 0;
+  const eggs = data.eggs || 0;
+  const protein = data.protein || 0;
+
+  // 날짜 표시
+  const dt = new Date(date + 'T00:00:00');
+  const dayNames = ['일','월','화','수','목','금','토'];
+  const dateLabel = `${dt.getMonth() + 1}월 ${dt.getDate()}일 (${dayNames[dt.getDay()]})`;
+
+  return (
+    <div className="bean-overlay" onClick={onClose}>
+      <div className="bean-modal day-detail-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="day-detail-date">{dateLabel}</div>
+        <div className="day-detail-score">
+          <span style={{fontFamily:"'Fraunces',serif",fontSize:48,fontWeight:600,color:'#2D3748'}}>{sc}</span>
+          <span style={{fontSize:14,color:'#94806B',marginLeft:6}}>점</span>
+        </div>
+        {bn > 0 && (
+          <div className="day-detail-beans">{bn === 2 ? '🫘🫘 콩알 2개' : '🫘 콩알 1개'} 받은 날!</div>
+        )}
+
+        <div className="day-summary">
+          <div className="day-row">
+            <span className="day-row-lbl">😴 잠</span>
+            <span className="day-row-val">{sleepH != null ? `${sleepH.toFixed(1)}시간` : '기록 없음'}</span>
+          </div>
+          <div className="day-row">
+            <span className="day-row-lbl">🌅 아침 루틴</span>
+            <span className="day-row-val">{routineDone}/{ROUTINES.length}</span>
+          </div>
+          <div className="day-row">
+            <span className="day-row-lbl">🍽️ 식사</span>
+            <span className="day-row-val">{mainMeals}/3끼 {fastMeals > 0 && `· ⚡${fastMeals}`}</span>
+          </div>
+          <div className="day-row">
+            <span className="day-row-lbl">🎒 학원</span>
+            <span className="day-row-val">{clss.length === 0 ? '학원 없는 날' : `${classDone}/${clss.length}`}</span>
+          </div>
+          <div className="day-row">
+            <span className="day-row-lbl">📐 숙제</span>
+            <span className="day-row-val">수학 {mathP}쪽 {drawing && '· 그림 ✓'}</span>
+          </div>
+          <div className="day-row">
+            <span className="day-row-lbl">💪 운동</span>
+            <span className="day-row-val">{exDone > 0 ? `${exDone}개` : '안 함'}</span>
+          </div>
+          {(milk > 0 || eggs > 0 || protein > 0) && (
+            <div className="day-row">
+              <span className="day-row-lbl">🥛 단백질</span>
+              <span className="day-row-val">
+                {milk > 0 && `우유 ${milk} `}
+                {eggs > 0 && `🥚 ${eggs} `}
+                {protein > 0 && `💪 ${protein}`}
+              </span>
+            </div>
+          )}
+          <div className="day-row">
+            <span className="day-row-lbl">🌙 자기 전</span>
+            <span className="day-row-val">{eveDone}/{EVENING_ROUTINES.length}</span>
+          </div>
+        </div>
+
+        <button className="bean-close" onClick={onClose}>닫기</button>
+      </div>
     </div>
   );
 }
