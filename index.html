@@ -525,7 +525,7 @@ const emptyDay = () => ({
   condition: 0,
   routines: { brushing: false, socks: false, vitamin: false, lotionAm: false },
   eveningRoutines: { shower: false, brushingPm: false, lotion: false },
-  homework: { math: 0, drawing: false },
+  homework: { math: 0, drawing: false, elementary: false, english: false },
   classes: {},
   milk: 0,
   eggs: 0,
@@ -545,8 +545,8 @@ const meetsHomeworkFor2Beans = (data) =>
   (data?.homework?.math || 0) >= HOMEWORK_FOR_2BEAN_MATH && !!data?.homework?.drawing;
 
 const beansForScore = (score, data) => {
-  if (score >= 95 && meetsHomeworkFor2Beans(data)) return 2;
-  if (score >= 90 && meetsHomeworkForBeans(data)) return 1;
+  if (score >= 105 && meetsHomeworkFor2Beans(data)) return 2;
+  if (score >= 100 && meetsHomeworkForBeans(data)) return 1;
   return 0;
 };
 
@@ -645,40 +645,45 @@ const calcScore = (data, dateKey) => {
     s += Math.round((done / todayClasses.length) * 20);
   }
 
-  // 숙제 (수학 1페이지=1점 최대 10점, 그림 3점)
-  s += (data.homework?.math || 0);
+  // 숙제 (수학 1페이지=2점 최대 20점, 그림 3점, 엘리하이 3점, 화요일 영어 2점)
+  s += (data.homework?.math || 0) * 2;
   s += data.homework?.drawing ? 3 : 0;
+  s += data.homework?.elementary ? 3 : 0;
+  // 화요일에만 영어 숙제 점수
+  const dk = dateKey || todayKey();
+  const dow = new Date(dk + 'T00:00:00').getDay();
+  if (dow === 2 && data.homework?.english) s += 2;
 
   // 운동: 줄넘기 3점, 하키연습 3점, 달리기 2점 (각각 독립)
   if (data.exercises?.jumprope) s += 3;
   if (data.exercises?.hockeyPrac) s += 3;
   if (data.exercises?.running) s += 2;
 
-  // 기본 점수 100 cap, 그 위에 우유 + 계란 + 더단백 음료 점수 추가
-  const baseScore = Math.min(100, s);
+  // 기본 점수 110 cap, 그 위에 우유 + 계란 + 더단백 음료 점수 추가
+  const baseScore = Math.min(110, s);
   return baseScore + milkScore(data.milk) + eggScore(data.eggs) + proteinScore(data.protein);
 };
 
-const character = (s) => s >= 90 ? '🌳' : s >= 60 ? '🌿' : s >= 30 ? '🌱' : s >= 10 ? '🌰' : '😴';
+const character = (s) => s >= 100 ? '🌳' : s >= 60 ? '🌿' : s >= 30 ? '🌱' : s >= 10 ? '🌰' : '😴';
 const message = (s, data) => {
   const math = data?.homework?.math || 0;
   const draw = !!data?.homework?.drawing;
 
-  // 콩알 2개 자격 (95+ & 수학 10 & 그림)
-  if (s >= 95 && math >= HOMEWORK_FOR_2BEAN_MATH && draw) return '완벽! 콩알 2개! 🎉🫘🫘';
+  // 콩알 2개 자격 (105+ & 수학 10 & 그림)
+  if (s >= 105 && math >= HOMEWORK_FOR_2BEAN_MATH && draw) return '완벽! 콩알 2개! 🎉🫘🫘';
 
   // 콩알 1개 자격
-  if (s >= 90 && math >= HOMEWORK_FOR_BEAN_MATH && draw) {
-    // 95+인데 콩알 2개 못 받은 경우: 안내
-    if (s >= 95 && math < HOMEWORK_FOR_2BEAN_MATH) {
+  if (s >= 100 && math >= HOMEWORK_FOR_BEAN_MATH && draw) {
+    // 105+인데 콩알 2개 못 받은 경우: 안내
+    if (s >= 105 && math < HOMEWORK_FOR_2BEAN_MATH) {
       const need = HOMEWORK_FOR_2BEAN_MATH - math;
       return `콩알 1개! 수학 ${need}쪽 더 하면 콩알 2개! 🫘+`;
     }
     return '콩알 받았다! 🫘';
   }
 
-  // 90+인데 콩알 자격 부족
-  if (s >= 90) {
+  // 100+인데 콩알 자격 부족
+  if (s >= 100) {
     const mathNeed = Math.max(0, HOMEWORK_FOR_BEAN_MATH - math);
     if (mathNeed > 0 && !draw) return '숙제 끝내야 콩알이야! 📚';
     if (mathNeed > 0) return `수학 ${mathNeed}쪽 더! 📐`;
@@ -686,14 +691,14 @@ const message = (s, data) => {
   }
 
   // 드라마 자격
-  if (s >= 85 && math >= HOMEWORK_FOR_DRAMA_MATH) {
+  if (s >= 95 && math >= HOMEWORK_FOR_DRAMA_MATH) {
     // 저녁 7시 이후엔 샤워 안 했으면 안내
     const isEvening = new Date().getHours() >= 19;
     const showerDone = !!data?.eveningRoutines?.shower;
     if (isEvening && !showerDone) return '샤워하고 드라마 보자! 🚿';
     return '드라마 시청권 획득! 🎬';
   }
-  if (s >= 85) {
+  if (s >= 95) {
     const need = Math.max(0, HOMEWORK_FOR_DRAMA_MATH - math);
     return `수학 ${need}쪽 더 해야 드라마! 📐`;
   }
@@ -701,7 +706,7 @@ const message = (s, data) => {
   // 일반
   if (s >= 60) return '좋아, 조금만 더!';
   // 아침 드라마는 오전 10시 이전에만 안내
-  if (s >= 47 && new Date().getHours() < 10) return '아침 드라마 20분 가능! 🎬';
+  if (s >= 57 && new Date().getHours() < 10) return '아침 드라마 20분 가능! 🎬';
   if (s >= 30) return '조금만 더 채워보자';
   if (s >= 10) return '아직 시간 있어!';
   return '오늘 시작해볼까?';
@@ -874,13 +879,13 @@ function KidView({ setMode, showToast, sync }) {
     prevTodayBeansRef.current = todayBeans;
   }, [todayBeans]);
 
-  // 85점 드라마 시청권 축하 (85~89 + 수학 8쪽 + 저녁 7시 이후엔 샤워까지 완료)
+  // 95점 드라마 시청권 축하 (95~99 + 수학 8쪽 + 저녁 7시 이후엔 샤워까지 완료)
   const prevDramaEligibleRef = useRef(false);
   useEffect(() => {
     const now = new Date();
     const isEvening = now.getHours() >= 19;
     const showerOK = !isEvening || !!data.eveningRoutines?.shower;
-    const eligible = score >= 85 && score < 90 && meetsHomeworkForDrama(data) && showerOK;
+    const eligible = score >= 95 && score < 100 && meetsHomeworkForDrama(data) && showerOK;
     if (!prevDramaEligibleRef.current && eligible) {
       setDramaCelebrate(true);
       if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
@@ -888,11 +893,11 @@ function KidView({ setMode, showToast, sync }) {
     prevDramaEligibleRef.current = eligible;
   }, [score, data]);
 
-  // 47점 아침 드라마 20분 축하 (점수 47점 처음 넘을 때 + 오전 10시 이전에만)
+  // 57점 아침 드라마 20분 축하 (점수 57점 처음 넘을 때 + 오전 10시 이전에만)
   const prevMorning45Ref = useRef(false);
   useEffect(() => {
     const beforeTen = new Date().getHours() < 10;
-    const eligible = score >= 47 && beforeTen;
+    const eligible = score >= 57 && beforeTen;
     if (!prevMorning45Ref.current && eligible) {
       setMorningDramaCelebrate(true);
       if (navigator.vibrate) navigator.vibrate([30, 15, 30]);
@@ -942,6 +947,14 @@ function KidView({ setMode, showToast, sync }) {
   };
   const toggleDrawing = () => {
     save({ ...data, homework: { ...data.homework, drawing: !data.homework?.drawing } });
+    if (navigator.vibrate) navigator.vibrate(10);
+  };
+  const toggleElementary = () => {
+    save({ ...data, homework: { ...data.homework, elementary: !data.homework?.elementary } });
+    if (navigator.vibrate) navigator.vibrate(10);
+  };
+  const toggleEnglish = () => {
+    save({ ...data, homework: { ...data.homework, english: !data.homework?.english } });
     if (navigator.vibrate) navigator.vibrate(10);
   };
   const adjustMilk = (delta) => {
@@ -1007,6 +1020,9 @@ function KidView({ setMode, showToast, sync }) {
   const classDone = todayClasses.filter(c => data.classes?.[c]).length;
   const mathPages = data.homework?.math || 0;
   const drawingDone = !!data.homework?.drawing;
+  const elementaryDone = !!data.homework?.elementary;
+  const englishDone = !!data.homework?.english;
+  const isTuesday = new Date(today + 'T00:00:00').getDay() === 2;
   const hwScore = (mathPages === 10 && drawingDone);
 
   return (
@@ -1030,7 +1046,7 @@ function KidView({ setMode, showToast, sync }) {
                 ? '한 번에 콩알 2개! 대박! 🎉'
                 : celebrate.todayBeans === 2
                   ? '수학까지 완벽! 콩알 +1 🫘'
-                  : '90점 넘었어! 대단해 👏'}
+                  : '100점 넘었어! 대단해 👏'}
             </div>
             <div className="bean-count-big">{celebrate.total}개</div>
             <div style={{fontSize:12,color:'#94806B',marginTop:4}}>총 모은 콩알</div>
@@ -1045,20 +1061,20 @@ function KidView({ setMode, showToast, sync }) {
           <div className="bean-modal drama-modal" onClick={(e) => e.stopPropagation()}>
             <div className="bean-big">🎬</div>
             <div className="bean-title" style={{color:'#7E3FAB'}}>드라마 시청권 획득!</div>
-            <div className="bean-msg">85점 넘었어! 🎉<br/>이제 5점만 더 채우면 콩알이야!</div>
+            <div className="bean-msg">95점 넘었어! 🎉<br/>이제 5점만 더 채우면 콩알이야!</div>
             <button className="bean-close" style={{background:'#9B5DCB'}}
                     onClick={() => setDramaCelebrate(null)}>좋아!</button>
           </div>
         </div>
       )}
 
-      {/* 47점 아침 드라마 20분 축하 모달 */}
+      {/* 57점 아침 드라마 20분 축하 모달 */}
       {morningDramaCelebrate && (
         <div className="bean-overlay" onClick={() => setMorningDramaCelebrate(null)}>
           <div className="bean-modal drama-modal" onClick={(e) => e.stopPropagation()}>
             <div className="bean-big">🎬⏱️</div>
             <div className="bean-title" style={{color:'#7E3FAB'}}>아침 드라마 20분!</div>
-            <div className="bean-msg">47점 도달! 🎉<br/>20분만! 잘 다녀와 👋</div>
+            <div className="bean-msg">57점 도달! 🎉<br/>20분만! 잘 다녀와 👋</div>
             <button className="bean-close" style={{background:'#9B5DCB'}}
                     onClick={() => setMorningDramaCelebrate(null)}>고마워!</button>
           </div>
@@ -1129,11 +1145,11 @@ function KidView({ setMode, showToast, sync }) {
         </div>
         <div className="score-msg">{message(score, data)}</div>
         <div className="score-bar">
-          <div className="score-bar-fill" style={{width:`${Math.min(100, score)}%`}}></div>
-          <div className="score-bar-mark" style={{left:'47%',background:'#9B5DCB'}}></div>
-          <div className="score-mark-lbl" style={{left:'47%',color:'#9B5DCB'}}>🎬</div>
-          <div className="score-bar-mark" style={{left:'90%'}}></div>
-          <div className="score-mark-lbl" style={{left:'90%'}}>🫘</div>
+          <div className="score-bar-fill" style={{width:`${Math.min(100, (score/110)*100)}%`}}></div>
+          <div className="score-bar-mark" style={{left:'52%',background:'#9B5DCB'}}></div>
+          <div className="score-mark-lbl" style={{left:'52%',color:'#9B5DCB'}}>🎬</div>
+          <div className="score-bar-mark" style={{left:'91%'}}></div>
+          <div className="score-mark-lbl" style={{left:'91%'}}>🫘</div>
           <div className="score-mark-lbl" style={{left:'95%',transform:'translateX(-50%)'}}>🫘🫘</div>
         </div>
       </div>
@@ -1239,8 +1255,8 @@ function KidView({ setMode, showToast, sync }) {
         <div className={`hw-block ${mathPages === 10 ? 'done' : ''}`}>
           <div className="hw-block-head">
             <span className="hw-block-emoji">📐</span>
-            <span className="hw-block-title">수학 (10페이지)</span>
-            <span className="hw-block-meta">{mathPages} / 10</span>
+            <span className="hw-block-title">수학 (1쪽 +2점)</span>
+            <span className="hw-block-meta">{mathPages} / 10 · +{mathPages * 2}점</span>
           </div>
           <div className="hw-row">
             <button className="hw-btn" onClick={() => adjustMath(-1)} disabled={mathPages === 0}>−</button>
@@ -1263,12 +1279,39 @@ function KidView({ setMode, showToast, sync }) {
           <div className="hw-block-head">
             <span className="hw-block-emoji">🎨</span>
             <span className="hw-block-title">그림</span>
+            <span className="hw-block-meta">+3점</span>
           </div>
           <button className={`hw-draw-btn ${drawingDone ? 'checked' : ''}`} onClick={toggleDrawing}>
             <div className="hw-draw-check">✓</div>
             <div className="hw-draw-lbl">{drawingDone ? '완료!' : '오늘 끝내기'}</div>
           </button>
         </div>
+
+        <div className={`hw-block ${elementaryDone ? 'done' : ''}`}>
+          <div className="hw-block-head">
+            <span className="hw-block-emoji">📱</span>
+            <span className="hw-block-title">엘리하이</span>
+            <span className="hw-block-meta">+3점</span>
+          </div>
+          <button className={`hw-draw-btn ${elementaryDone ? 'checked' : ''}`} onClick={toggleElementary}>
+            <div className="hw-draw-check">✓</div>
+            <div className="hw-draw-lbl">{elementaryDone ? '완료!' : '오늘 끝내기'}</div>
+          </button>
+        </div>
+
+        {isTuesday && (
+          <div className={`hw-block ${englishDone ? 'done' : ''}`}>
+            <div className="hw-block-head">
+              <span className="hw-block-emoji">🔤</span>
+              <span className="hw-block-title">영어 숙제 (화요일)</span>
+              <span className="hw-block-meta">+2점</span>
+            </div>
+            <button className={`hw-draw-btn ${englishDone ? 'checked' : ''}`} onClick={toggleEnglish}>
+              <div className="hw-draw-check">✓</div>
+              <div className="hw-draw-lbl">{englishDone ? '완료!' : '오늘 끝내기'}</div>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 식사 */}
@@ -1532,7 +1575,7 @@ function WeekTab() {
       </div>
 
       <div className="stat-grid">
-        <StatCard label="평균 점수" value={stats.avgScore != null ? Math.round(stats.avgScore) : '—'} unit="/100" target="90+" good={stats.avgScore >= 90}/>
+        <StatCard label="평균 점수" value={stats.avgScore != null ? Math.round(stats.avgScore) : '—'} unit="/110" target="100+" good={stats.avgScore >= 100}/>
         <StatCard label="이번주 콩알" value={stats.weekBeans} unit="개" target="7+" good={stats.weekBeans >= 7}/>
         <StatCard label="평균 수면" value={stats.avgSleep != null ? stats.avgSleep.toFixed(1) : '—'} unit="h" target="9.0+" good={stats.avgSleep >= 9}/>
         <StatCard label="평균 칼로리" value={stats.avgKcal != null ? Math.round(stats.avgKcal).toLocaleString() : '—'} unit="kcal" target="3,000+" good={stats.avgKcal >= 3000}/>
@@ -1546,8 +1589,8 @@ function WeekTab() {
               <R.CartesianGrid strokeDasharray="2 4" stroke="#E8E3D6" vertical={false}/>
               <R.XAxis dataKey="day" tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false}/>
               <R.YAxis domain={[0,100]} tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false}/>
-              <R.ReferenceLine y={90} stroke="#B8860B" strokeDasharray="3 3"/>
-              <R.ReferenceLine y={95} stroke="#E89A0F" strokeDasharray="3 3"/>
+              <R.ReferenceLine y={100} stroke="#B8860B" strokeDasharray="3 3"/>
+              <R.ReferenceLine y={105} stroke="#E89A0F" strokeDasharray="3 3"/>
               <R.Tooltip
                 contentStyle={{borderRadius:8,fontSize:12,border:'1px solid #E8E3D6'}}
                 formatter={(v, name, props) => {
@@ -1567,8 +1610,8 @@ function WeekTab() {
           </R.ResponsiveContainer>
         </div>
         <div className="chart-legend">
-          <span className="legend-dot" style={{background:'#E89A0F'}}></span><span style={{marginRight:10}}>🫘🫘 95점+</span>
-          <span className="legend-dot" style={{background:'#F4C13D'}}></span><span style={{marginRight:10}}>🫘 90점+</span>
+          <span className="legend-dot" style={{background:'#E89A0F'}}></span><span style={{marginRight:10}}>🫘🫘 105점+</span>
+          <span className="legend-dot" style={{background:'#F4C13D'}}></span><span style={{marginRight:10}}>🫘 100점+</span>
           <span className="legend-dot" style={{background:'#FFD89C'}}></span><span>미달</span>
         </div>
       </div>
@@ -1853,9 +1896,9 @@ function MonthCalendar({ today }) {
 
   // 점수에 따른 색상 (낮음: 옅음 → 높음: 짙음)
   const scoreColor = (sc) => {
-    if (sc >= 95) return '#E89A0F';
-    if (sc >= 90) return '#F4C13D';
-    if (sc >= 85) return '#FFD580';
+    if (sc >= 105) return '#E89A0F';
+    if (sc >= 100) return '#F4C13D';
+    if (sc >= 95) return '#FFD580';
     if (sc >= 60) return '#FFE8B8';
     if (sc >= 30) return '#FFF1B8';
     if (sc > 0)   return '#FFF8E7';
@@ -1926,6 +1969,8 @@ function DayDetailModal({ date, data, onClose }) {
   const fastMeals = ['breakfast','dinner'].filter(k => data.meals?.[k] === 2).length;
   const mathP = data.homework?.math || 0;
   const drawing = !!data.homework?.drawing;
+  const elementary = !!data.homework?.elementary;
+  const english = !!data.homework?.english;
   const clss = getClassesForDay(date);
   const classDone = clss.filter(c => data.classes?.[c]).length;
   const exDone = Object.keys(data.exercises || {}).filter(k => data.exercises[k]).length;
@@ -1971,7 +2016,12 @@ function DayDetailModal({ date, data, onClose }) {
           </div>
           <div className="day-row">
             <span className="day-row-lbl">📐 숙제</span>
-            <span className="day-row-val">수학 {mathP}쪽 {drawing && '· 그림 ✓'}</span>
+            <span className="day-row-val">
+              수학 {mathP}쪽
+              {drawing && ' · 그림✓'}
+              {elementary && ' · 엘리하이✓'}
+              {english && ' · 영어✓'}
+            </span>
           </div>
           <div className="day-row">
             <span className="day-row-lbl">💪 운동</span>
