@@ -76,6 +76,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .reward-need{font-size:11px;color:#94806B;margin-top:2px}
 .reward-bar{height:6px;background:#fff;border-radius:999px;overflow:hidden;margin-top:6px}
 .reward-bar-fill{height:100%;background:linear-gradient(90deg,#F4C13D,#FFB85C);border-radius:999px;transition:width .6s ease}
+.reward-item.no-price{background:#FCE4D6;border-color:#F4B580}
+.reward-item.no-price .reward-icon{background:#FFE4D6}
+.wish-add{background:#FAF7EF;border-radius:12px;padding:12px;margin-bottom:14px;border:1px dashed #D8CFC0}
+.wish-add-lbl{font-size:13px;font-weight:700;color:#5A4A3A;margin-bottom:8px;text-align:left}
 .sync-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:5px 8px;border-radius:999px;border:1px solid transparent;transition:all .2s}
 .sync-spin{display:inline-block;animation:spin360 1s linear infinite}
 @keyframes spin360{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
@@ -317,13 +321,13 @@ const ls = {
   set: (k, v) => {
     try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
     // 자동 클라우드 동기화 트리거
-    if (typeof k === 'string' && (k.startsWith('daily:') || k.startsWith('monthly:'))) {
+    if (typeof k === 'string' && (k.startsWith('daily:') || k.startsWith('monthly:') || k.startsWith('wishlist:') || k.startsWith('migrated:'))) {
       schedulePushToServer();
     }
   },
   remove: (k) => {
     try { localStorage.removeItem(k); } catch {}
-    if (typeof k === 'string' && (k.startsWith('daily:') || k.startsWith('monthly:'))) {
+    if (typeof k === 'string' && (k.startsWith('daily:') || k.startsWith('monthly:') || k.startsWith('wishlist:') || k.startsWith('migrated:'))) {
       schedulePushToServer();
     }
   },
@@ -352,11 +356,14 @@ const notifySyncStatus = (status, time) => {
   syncStatusCallbacks.forEach(cb => cb(status, lastSyncedAt));
 };
 
+const SYNCED_KEY_PREFIXES = ['daily:', 'monthly:', 'wishlist:', 'migrated:'];
+const isSyncedKey = (k) => typeof k === 'string' && SYNCED_KEY_PREFIXES.some(p => k.startsWith(p));
+
 const getAllLocalData = () => {
   const data = {};
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k && (k.startsWith('daily:') || k.startsWith('monthly:'))) {
+    if (isSyncedKey(k)) {
       try { data[k] = JSON.parse(localStorage.getItem(k)); } catch {}
     }
   }
@@ -366,9 +373,8 @@ const getAllLocalData = () => {
 const applyServerData = (serverData) => {
   if (!serverData || typeof serverData !== 'object') return false;
   let changed = false;
-  // 로컬에 적용
   Object.entries(serverData).forEach(([k, v]) => {
-    if (k.startsWith('daily:') || k.startsWith('monthly:')) {
+    if (isSyncedKey(k)) {
       try {
         const local = localStorage.getItem(k);
         const newStr = JSON.stringify(v);
@@ -379,7 +385,6 @@ const applyServerData = (serverData) => {
       } catch {}
     }
   });
-  // 로컬에 있는데 서버에 없는 키도 처리할지? 일단 보존 (last-write-wins for keys present in server)
   return changed;
 };
 
@@ -556,6 +561,29 @@ const REWARDS = [
   { beans: 100, emoji: '🎧', name: '에어팟 프로' },
 ];
 
+// ============================================================
+// 위시리스트 (아이가 추가, 부모가 콩알 가격 설정)
+// ============================================================
+const newWishId = () => 'w_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+
+const getAllWishes = () => {
+  const wishes = [];
+  ls.keys('wishlist:').forEach(k => {
+    const w = ls.get(k);
+    if (w && w.id) wishes.push(w);
+  });
+  // 정렬: 가격 설정된 거 먼저 (작은 가격 → 큰 가격), 미설정은 뒤에 (생성순)
+  wishes.sort((a, b) => {
+    const ap = a.beans == null ? Infinity : a.beans;
+    const bp = b.beans == null ? Infinity : b.beans;
+    if (ap === Infinity && bp === Infinity) return (a.createdAt || 0) - (b.createdAt || 0);
+    return ap - bp;
+  });
+  return wishes;
+};
+const saveWish = (w) => ls.set('wishlist:' + w.id, w);
+const removeWish = (id) => ls.remove('wishlist:' + id);
+
 // 우유 점수: 1잔=1점, 3잔에서 보너스 +2 (3잔=5점)
 const milkScore = (n) => {
   const cups = Math.max(0, n || 0);
@@ -618,8 +646,9 @@ const calcScore = (data, dateKey) => {
   s += (data.homework?.math || 0);
   s += data.homework?.drawing ? 3 : 0;
 
-  // 운동: 줄넘기+하키연습 둘 다 5점, 달리기 2점
-  if (data.exercises?.jumprope && data.exercises?.hockeyPrac) s += 5;
+  // 운동: 줄넘기 3점, 하키연습 3점, 달리기 2점 (각각 독립)
+  if (data.exercises?.jumprope) s += 3;
+  if (data.exercises?.hockeyPrac) s += 3;
   if (data.exercises?.running) s += 2;
 
   // 기본 점수 100 cap, 그 위에 우유 + 계란 + 더단백 음료 점수 추가
@@ -814,7 +843,7 @@ function KidView({ setMode, showToast, sync }) {
   const sleep = calcSleep(data.bedtime, data.wakeup);
   const mealCount = MEALS.filter(m => data.meals[m.key]).length;
   const mainMealCount = ['breakfast','lunch','dinner'].filter(k => data.meals?.[k]).length;
-  const exerciseBonus = !!(data.exercises?.jumprope && data.exercises?.hockeyPrac);
+  const exerciseBonus = !!(data.exercises?.jumprope || data.exercises?.hockeyPrac);
   const milkCups = data.milk || 0;
   const milkPts = milkScore(milkCups);
   const eggCount = data.eggs || 0;
@@ -1035,36 +1064,9 @@ function KidView({ setMode, showToast, sync }) {
 
       {/* 콩알 보상 모달 */}
       {showRewards && (
-        <div className="bean-overlay" onClick={() => setShowRewards(false)}>
-          <div className="bean-modal rewards-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="bean-big">🫘</div>
-            <div className="bean-title">콩알 보상</div>
-            <div className="bean-count-big" style={{marginTop:6}}>{beansCount}개</div>
-            <div style={{fontSize:12,color:'#94806B',marginTop:2,marginBottom:14}}>지금까지 모은 콩알</div>
-            <div className="rewards-list">
-              {REWARDS.map((r) => {
-                const unlocked = beansCount >= r.beans;
-                const left = Math.max(0, r.beans - beansCount);
-                const pct = Math.min(100, (beansCount / r.beans) * 100);
-                return (
-                  <div key={r.beans} className={`reward-item ${unlocked ? 'on' : ''}`}>
-                    <div className="reward-icon">{unlocked ? r.emoji : '🔒'}</div>
-                    <div className="reward-body">
-                      <div className="reward-name">{r.name}</div>
-                      <div className="reward-need">
-                        🫘 {r.beans}개 {unlocked ? <span style={{color:'#3D7C3D',fontWeight:700}}>· 받을 수 있어!</span> : <span>· {left}개 더!</span>}
-                      </div>
-                      <div className="reward-bar">
-                        <div className="reward-bar-fill" style={{width:`${pct}%`}}></div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <button className="bean-close" onClick={() => setShowRewards(false)}>닫기</button>
-          </div>
-        </div>
+        <RewardsModal beansCount={beansCount}
+                      onClose={() => setShowRewards(false)}
+                      readonly={true} />
       )}
 
       {/* 부모 화면 비밀번호 모달 */}
@@ -1195,7 +1197,7 @@ function KidView({ setMode, showToast, sync }) {
         <div className="mission-head">
           <span className="mission-emoji">💪</span>
           <span className="mission-title">오늘 한 운동</span>
-          <span className="mission-meta">🎯 줄넘기+하키연습</span>
+          <span className="mission-meta">🎯 줄넘기 +3 · 하키연습 +3</span>
           <span className="mission-star">⭐</span>
         </div>
         <div className="ex-row">
@@ -1439,6 +1441,7 @@ function KidView({ setMode, showToast, sync }) {
 
 function ParentView({ setMode, showToast, sync }) {
   const [tab, setTab] = useState('week');
+  const [showRewards, setShowRewards] = useState(false);
   const beans = countBeans();
   return (
     <div className="parent-app">
@@ -1446,9 +1449,9 @@ function ParentView({ setMode, showToast, sync }) {
         <button className="parent-back" onClick={() => setMode('kid')}>‹</button>
         <h1 className="parent-title">부모 화면</h1>
         <SyncBadge sync={sync} />
-        <div className="parent-bean-count">
+        <button className="parent-bean-count" onClick={() => setShowRewards(true)} style={{cursor:'pointer'}}>
           <span>🫘</span><span>{beans}</span>
-        </div>
+        </button>
       </div>
       <div className="parent-tabs">
         <button className={`parent-tab ${tab === 'week' ? 'active' : ''}`} onClick={() => setTab('week')}>주간</button>
@@ -1460,6 +1463,11 @@ function ParentView({ setMode, showToast, sync }) {
         {tab === 'monthly' && <MonthlyTab showToast={showToast} />}
         {tab === 'backup'  && <BackupTab showToast={showToast} />}
       </div>
+      {showRewards && (
+        <RewardsModal beansCount={beans}
+                      onClose={() => setShowRewards(false)}
+                      readonly={false} />
+      )}
     </div>
   );
 }
@@ -1622,6 +1630,167 @@ function SyncBadge({ sync }) {
          title={time ? `마지막 동기화: ${new Date(time).toLocaleTimeString('ko-KR')}` : ''}>
       <span className={status === 'pulling' || status === 'pushing' ? 'sync-spin' : ''}>{icon}</span>
       <span>{label}</span>
+    </div>
+  );
+}
+
+// ============================================================
+// 콩알 보상 모달 (위시리스트 포함)
+// readonly=true: 아동 모드 (이름만 추가, 가격 입력 불가)
+// readonly=false: 부모 모드 (가격 설정, 삭제 가능)
+// ============================================================
+function RewardsModal({ beansCount, onClose, readonly = true }) {
+  const [wishes, setWishes] = useState(() => getAllWishes());
+  const [newName, setNewName] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editPrice, setEditPrice] = useState('');
+
+  const refreshWishes = () => setWishes(getAllWishes());
+
+  const addWish = () => {
+    const name = newName.trim();
+    if (!name) return;
+    saveWish({
+      id: newWishId(),
+      name,
+      beans: null, // 가격 미설정
+      createdAt: Date.now(),
+    });
+    setNewName('');
+    refreshWishes();
+  };
+
+  const startEditPrice = (w) => {
+    setEditingId(w.id);
+    setEditPrice(w.beans == null ? '' : String(w.beans));
+  };
+  const savePrice = (w) => {
+    const n = parseInt(editPrice, 10);
+    if (!isNaN(n) && n > 0) {
+      saveWish({ ...w, beans: n });
+    } else if (editPrice === '') {
+      saveWish({ ...w, beans: null });
+    }
+    setEditingId(null);
+    setEditPrice('');
+    refreshWishes();
+  };
+  const deleteWish = (id) => {
+    if (!confirm('이 위시 삭제할까요?')) return;
+    removeWish(id);
+    refreshWishes();
+  };
+
+  // 기본 보상 + 위시리스트 합쳐서 표시 (기본 보상은 항상 위에)
+  const builtIn = REWARDS.map(r => ({ id: 'built-in:' + r.beans, name: r.name, beans: r.beans, emoji: r.emoji, isBuiltIn: true }));
+  const userWishes = wishes.map(w => ({ ...w, emoji: '🎁', isBuiltIn: false }));
+  const allItems = [...builtIn, ...userWishes];
+
+  return (
+    <div className="bean-overlay" onClick={onClose}>
+      <div className="bean-modal rewards-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="bean-big">🫘</div>
+        <div className="bean-title">콩알 보상</div>
+        <div className="bean-count-big" style={{marginTop:6}}>{beansCount}개</div>
+        <div style={{fontSize:12,color:'#94806B',marginTop:2,marginBottom:14}}>지금까지 모은 콩알</div>
+
+        <div className="rewards-list">
+          {allItems.map((item) => {
+            const hasPrice = item.beans != null && item.beans > 0;
+            const unlocked = hasPrice && beansCount >= item.beans;
+            const left = hasPrice ? Math.max(0, item.beans - beansCount) : 0;
+            const pct = hasPrice ? Math.min(100, (beansCount / item.beans) * 100) : 0;
+            const isEditing = editingId === item.id;
+
+            return (
+              <div key={item.id} className={`reward-item ${unlocked ? 'on' : ''} ${!hasPrice ? 'no-price' : ''}`}>
+                <div className="reward-icon">{unlocked ? item.emoji : (hasPrice ? '🔒' : item.emoji)}</div>
+                <div className="reward-body">
+                  <div className="reward-name">{item.name}</div>
+
+                  {hasPrice && !isEditing && (
+                    <>
+                      <div className="reward-need">
+                        🫘 {item.beans}개 {unlocked ? <span style={{color:'#3D7C3D',fontWeight:700}}>· 받을 수 있어!</span> : <span>· {left}개 더!</span>}
+                      </div>
+                      <div className="reward-bar">
+                        <div className="reward-bar-fill" style={{width:`${pct}%`}}></div>
+                      </div>
+                    </>
+                  )}
+
+                  {!hasPrice && !isEditing && (
+                    <div className="reward-need">
+                      {readonly
+                        ? <span style={{color:'#94806B'}}>가격 정해지면 알려줄게! ⏳</span>
+                        : <span style={{color:'#C75D2C'}}>가격 설정 필요</span>}
+                    </div>
+                  )}
+
+                  {isEditing && (
+                    <div style={{display:'flex',gap:6,marginTop:4,alignItems:'center'}}>
+                      <span style={{fontSize:12}}>🫘</span>
+                      <input type="tel" inputMode="numeric" pattern="[0-9]*"
+                             className="form-input" style={{flex:1,padding:'6px 10px',fontSize:13}}
+                             value={editPrice}
+                             onChange={(e) => setEditPrice(e.target.value.replace(/[^0-9]/g,''))}
+                             placeholder="콩알 개수"
+                             autoFocus/>
+                      <button onClick={() => savePrice(item)}
+                              style={{background:'#3D7C3D',color:'#fff',padding:'6px 12px',borderRadius:8,fontSize:12,fontWeight:700}}>저장</button>
+                      <button onClick={() => { setEditingId(null); setEditPrice(''); }}
+                              style={{background:'#E0D8C8',color:'#5A4A3A',padding:'6px 10px',borderRadius:8,fontSize:12}}>취소</button>
+                    </div>
+                  )}
+
+                  {/* 부모 모드 - 위시만 편집 가능 (built-in 보상은 코드에서 정의됨) */}
+                  {!readonly && !item.isBuiltIn && !isEditing && (
+                    <div style={{display:'flex',gap:6,marginTop:6}}>
+                      <button onClick={() => startEditPrice(item)}
+                              style={{fontSize:11,padding:'4px 10px',borderRadius:8,background:'#FFE4D6',color:'#C75D2C',fontWeight:600}}>
+                        💰 가격 {hasPrice ? '수정' : '설정'}
+                      </button>
+                      <button onClick={() => deleteWish(item.id)}
+                              style={{fontSize:11,padding:'4px 10px',borderRadius:8,background:'#FCE4D6',color:'#C4654D',fontWeight:600}}>
+                        🗑 삭제
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {allItems.length === REWARDS.length && (
+            <div style={{textAlign:'center',color:'#94806B',fontSize:12,padding:'12px 0'}}>
+              {readonly ? '받고 싶은 거 아래에 적어봐! 👇' : '아이가 추가한 위시가 아직 없어요'}
+            </div>
+          )}
+        </div>
+
+        {/* 새 위시 입력 (모두에게 열려있음 - 아이가 적고 부모가 가격 설정) */}
+        <div className="wish-add">
+          <div className="wish-add-lbl">{readonly ? '🎁 받고 싶은 거 적어줘!' : '🎁 위시 추가 (가격은 따로 설정)'}</div>
+          <div style={{display:'flex',gap:6}}>
+            <input type="text" className="form-input" style={{flex:1,padding:'10px 12px',fontSize:14}}
+                   value={newName}
+                   onChange={(e) => setNewName(e.target.value)}
+                   placeholder="예: 아이폰19, 게임팩…"
+                   maxLength={30}/>
+            <button onClick={addWish} disabled={!newName.trim()}
+                    style={{background:newName.trim()?'#FFB85C':'#E0D8C8',color:'#fff',padding:'0 16px',borderRadius:10,fontSize:14,fontWeight:700}}>
+              추가
+            </button>
+          </div>
+          {readonly && (
+            <div style={{fontSize:11,color:'#94806B',marginTop:6,textAlign:'center'}}>
+              엄마/아빠가 콩알 가격을 정해주실 거야 ⏳
+            </div>
+          )}
+        </div>
+
+        <button className="bean-close" onClick={onClose}>닫기</button>
+      </div>
     </div>
   );
 }
