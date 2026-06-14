@@ -535,18 +535,22 @@ const emptyDay = () => ({
 // 점수별 콩알 개수
 // 보상 자격: 숙제 조건
 const HOMEWORK_FOR_DRAMA_MATH = 8;
-const HOMEWORK_FOR_BEAN_MATH = 8;
-const HOMEWORK_FOR_2BEAN_MATH = 10;
+const HOMEWORK_FOR_BEAN_MATH = 5;    // 콩알 1개: 수학 5쪽
+const HOMEWORK_FOR_2BEAN_MATH = 8;   // 콩알 2개: 수학 8쪽
+const HOMEWORK_FOR_4BEAN_MATH = 10;  // 콩알 4개: 수학 10쪽
 const meetsHomeworkForDrama = (data) =>
   (data?.homework?.math || 0) >= HOMEWORK_FOR_DRAMA_MATH;
 const meetsHomeworkForBeans = (data) =>
-  (data?.homework?.math || 0) >= HOMEWORK_FOR_BEAN_MATH && !!data?.homework?.drawing;
+  (data?.homework?.math || 0) >= HOMEWORK_FOR_BEAN_MATH;
 const meetsHomeworkFor2Beans = (data) =>
-  (data?.homework?.math || 0) >= HOMEWORK_FOR_2BEAN_MATH && !!data?.homework?.drawing;
+  (data?.homework?.math || 0) >= HOMEWORK_FOR_2BEAN_MATH;
+const meetsHomeworkFor4Beans = (data) =>
+  (data?.homework?.math || 0) >= HOMEWORK_FOR_4BEAN_MATH;
 
 const beansForScore = (score, data) => {
-  if (score >= 105 && meetsHomeworkFor2Beans(data)) return 2;
-  if (score >= 100 && meetsHomeworkForBeans(data)) return 1;
+  if (score >= 100 && meetsHomeworkFor4Beans(data)) return 4;
+  if (score >= 95  && meetsHomeworkFor2Beans(data)) return 2;
+  if (score >= 85  && meetsHomeworkForBeans(data))  return 1;
   return 0;
 };
 
@@ -667,45 +671,44 @@ const calcScore = (data, dateKey) => {
 const character = (s) => s >= 100 ? '🌳' : s >= 60 ? '🌿' : s >= 30 ? '🌱' : s >= 10 ? '🌰' : '😴';
 const message = (s, data) => {
   const math = data?.homework?.math || 0;
-  const draw = !!data?.homework?.drawing;
 
-  // 콩알 2개 자격 (105+ & 수학 10 & 그림)
-  if (s >= 105 && math >= HOMEWORK_FOR_2BEAN_MATH && draw) return '완벽! 콩알 2개! 🎉🫘🫘';
+  // 콩알 4개 자격 (최종)
+  if (s >= 100 && math >= HOMEWORK_FOR_4BEAN_MATH) return '완벽! 콩알 4개! 🎉🫘🫘🫘🫘';
+
+  // 콩알 2개 자격
+  if (s >= 95 && math >= HOMEWORK_FOR_2BEAN_MATH) {
+    if (s >= 100 && math < HOMEWORK_FOR_4BEAN_MATH) {
+      const need = HOMEWORK_FOR_4BEAN_MATH - math;
+      return `콩알 2개! 수학 ${need}쪽 더 하면 콩알 4개! 🫘+`;
+    }
+    return '콩알 2개! 🫘🫘';
+  }
 
   // 콩알 1개 자격
-  if (s >= 100 && math >= HOMEWORK_FOR_BEAN_MATH && draw) {
-    // 105+인데 콩알 2개 못 받은 경우: 안내
-    if (s >= 105 && math < HOMEWORK_FOR_2BEAN_MATH) {
+  if (s >= 85 && math >= HOMEWORK_FOR_BEAN_MATH) {
+    if (s >= 95 && math < HOMEWORK_FOR_2BEAN_MATH) {
       const need = HOMEWORK_FOR_2BEAN_MATH - math;
       return `콩알 1개! 수학 ${need}쪽 더 하면 콩알 2개! 🫘+`;
     }
-    return '콩알 받았다! 🫘';
+    return '콩알 1개! 🫘';
   }
 
-  // 100+인데 콩알 자격 부족
-  if (s >= 100) {
-    const mathNeed = Math.max(0, HOMEWORK_FOR_BEAN_MATH - math);
-    if (mathNeed > 0 && !draw) return '숙제 끝내야 콩알이야! 📚';
-    if (mathNeed > 0) return `수학 ${mathNeed}쪽 더! 📐`;
-    if (!draw) return '그림 끝내야 콩알! 🎨';
+  // 점수 도달인데 수학 부족
+  if (s >= 85) {
+    const need = Math.max(0, HOMEWORK_FOR_BEAN_MATH - math);
+    return `수학 ${need}쪽 더 해야 콩알! 📐`;
   }
 
-  // 드라마 자격
-  if (s >= 95 && math >= HOMEWORK_FOR_DRAMA_MATH) {
-    // 저녁 7시 이후엔 샤워 안 했으면 안내
+  // 드라마 자격 (95+, 수학 8) - 콩알 자격 안 될 때만 표시 (수학 부족 케이스는 거의 없음)
+  if (s >= 85 && math >= HOMEWORK_FOR_DRAMA_MATH) {
     const isEvening = new Date().getHours() >= 19;
     const showerDone = !!data?.eveningRoutines?.shower;
     if (isEvening && !showerDone) return '샤워하고 드라마 보자! 🚿';
     return '드라마 시청권 획득! 🎬';
   }
-  if (s >= 95) {
-    const need = Math.max(0, HOMEWORK_FOR_DRAMA_MATH - math);
-    return `수학 ${need}쪽 더 해야 드라마! 📐`;
-  }
 
   // 일반
   if (s >= 60) return '좋아, 조금만 더!';
-  // 아침 드라마는 오전 10시 이전에만 안내
   if (s >= 57 && new Date().getHours() < 10) return '아침 드라마 20분 가능! 🎬';
   if (s >= 30) return '조금만 더 채워보자';
   if (s >= 10) return '아직 시간 있어!';
@@ -879,13 +882,16 @@ function KidView({ setMode, showToast, sync }) {
     prevTodayBeansRef.current = todayBeans;
   }, [todayBeans]);
 
-  // 95점 드라마 시청권 축하 (95~99 + 수학 8쪽 + 저녁 7시 이후엔 샤워까지 완료)
+  // 드라마 시청권 축하 - 85점 이상 + 수학 8쪽 + 저녁 7시 이후엔 샤워 완료 + 콩알 자격 안 됨 (수학 미달)
   const prevDramaEligibleRef = useRef(false);
   useEffect(() => {
     const now = new Date();
     const isEvening = now.getHours() >= 19;
     const showerOK = !isEvening || !!data.eveningRoutines?.shower;
-    const eligible = score >= 95 && score < 100 && meetsHomeworkForDrama(data) && showerOK;
+    const math = data?.homework?.math || 0;
+    // 콩알 받는 점수대에선 콩알 모달 우선, 드라마는 그 사이 단계에서만
+    const beans = beansForScore(score, data);
+    const eligible = score >= 85 && math >= HOMEWORK_FOR_DRAMA_MATH && showerOK && beans === 0;
     if (!prevDramaEligibleRef.current && eligible) {
       setDramaCelebrate(true);
       if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
@@ -1032,21 +1038,20 @@ function KidView({ setMode, showToast, sync }) {
         <div className="bean-overlay" onClick={() => setCelebrate(null)}>
           <div className="bean-modal" onClick={(e) => e.stopPropagation()}>
             <div className="bean-big">
-              {celebrate.gained === 2 ? '🫘🫘' : '🫘'}
+              {celebrate.todayBeans === 4 ? '🫘🫘🫘🫘' :
+               celebrate.todayBeans === 2 ? '🫘🫘' : '🫘'}
             </div>
             <div className="bean-title">
-              {celebrate.todayBeans === 2 && celebrate.gained === 2
-                ? '콩알 2개 획득! 🎉'
-                : celebrate.todayBeans === 2
-                  ? '콩알 2개 달성!'
-                  : '콩알 1개 획득!'}
+              {celebrate.todayBeans === 4 ? '콩알 4개 획득! 🎉' :
+               celebrate.todayBeans === 2 ? '콩알 2개 획득!' :
+               '콩알 1개 획득!'}
             </div>
             <div className="bean-msg">
-              {celebrate.gained === 2
-                ? '한 번에 콩알 2개! 대박! 🎉'
+              {celebrate.todayBeans === 4
+                ? '완벽한 하루! 수학 10쪽도 끝냈어! 🎉'
                 : celebrate.todayBeans === 2
-                  ? '수학까지 완벽! 콩알 +1 🫘'
-                  : '100점 넘었어! 대단해 👏'}
+                  ? '대단해! 수학 8쪽까지! 🌟'
+                  : '85점 넘었어! 잘했어 👏'}
             </div>
             <div className="bean-count-big">{celebrate.total}개</div>
             <div style={{fontSize:12,color:'#94806B',marginTop:4}}>총 모은 콩알</div>
@@ -1061,7 +1066,7 @@ function KidView({ setMode, showToast, sync }) {
           <div className="bean-modal drama-modal" onClick={(e) => e.stopPropagation()}>
             <div className="bean-big">🎬</div>
             <div className="bean-title" style={{color:'#7E3FAB'}}>드라마 시청권 획득!</div>
-            <div className="bean-msg">95점 넘었어! 🎉<br/>이제 5점만 더 채우면 콩알이야!</div>
+            <div className="bean-msg">드라마 봐도 돼! 🎉</div>
             <button className="bean-close" style={{background:'#9B5DCB'}}
                     onClick={() => setDramaCelebrate(null)}>좋아!</button>
           </div>
@@ -1148,9 +1153,12 @@ function KidView({ setMode, showToast, sync }) {
           <div className="score-bar-fill" style={{width:`${Math.min(100, (score/110)*100)}%`}}></div>
           <div className="score-bar-mark" style={{left:'52%',background:'#9B5DCB'}}></div>
           <div className="score-mark-lbl" style={{left:'52%',color:'#9B5DCB'}}>🎬</div>
+          <div className="score-bar-mark" style={{left:'77%'}}></div>
+          <div className="score-mark-lbl" style={{left:'77%'}}>🫘</div>
+          <div className="score-bar-mark" style={{left:'86%'}}></div>
+          <div className="score-mark-lbl" style={{left:'86%'}}>🫘🫘</div>
           <div className="score-bar-mark" style={{left:'91%'}}></div>
-          <div className="score-mark-lbl" style={{left:'91%'}}>🫘</div>
-          <div className="score-mark-lbl" style={{left:'95%',transform:'translateX(-50%)'}}>🫘🫘</div>
+          <div className="score-mark-lbl" style={{left:'91%'}}>🫘×4</div>
         </div>
       </div>
 
@@ -1543,7 +1551,8 @@ function WeekTab() {
     }).length;
     const scores = valid.map(d => calcScore(d.data, d.key));
     const weekBeans = valid.reduce((s, d) => s + calcBestBeans(d.data, d.key), 0);
-    const twoBeanDays = valid.filter(d => calcBestBeans(d.data, d.key) === 2).length;
+    const twoBeanDays = valid.filter(d => calcBestBeans(d.data, d.key) >= 2).length;
+    const fourBeanDays = valid.filter(d => calcBestBeans(d.data, d.key) === 4).length;
     const avg = (a) => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
     return {
       avgSleep: avg(sleeps),
@@ -1554,6 +1563,7 @@ function WeekTab() {
       validDays: valid.length,
       weekBeans,
       twoBeanDays,
+      fourBeanDays,
     };
   }, [days]);
 
@@ -1571,11 +1581,11 @@ function WeekTab() {
   return (
     <div>
       <div style={{padding:'8px 4px 12px',fontSize:13,color:'#8B8478'}}>
-        {stats.validDays}일 기록 · 이번주 콩알 {stats.weekBeans}개 · 콩알 2개 {stats.twoBeanDays}일 · 운동 {stats.exDays}일
+        {stats.validDays}일 기록 · 이번주 콩알 {stats.weekBeans}개 · 콩알 4개 {stats.fourBeanDays}일 · 운동 {stats.exDays}일
       </div>
 
       <div className="stat-grid">
-        <StatCard label="평균 점수" value={stats.avgScore != null ? Math.round(stats.avgScore) : '—'} unit="/110" target="100+" good={stats.avgScore >= 100}/>
+        <StatCard label="평균 점수" value={stats.avgScore != null ? Math.round(stats.avgScore) : '—'} unit="/110" target="95+" good={stats.avgScore >= 95}/>
         <StatCard label="이번주 콩알" value={stats.weekBeans} unit="개" target="7+" good={stats.weekBeans >= 7}/>
         <StatCard label="평균 수면" value={stats.avgSleep != null ? stats.avgSleep.toFixed(1) : '—'} unit="h" target="9.0+" good={stats.avgSleep >= 9}/>
         <StatCard label="평균 칼로리" value={stats.avgKcal != null ? Math.round(stats.avgKcal).toLocaleString() : '—'} unit="kcal" target="3,000+" good={stats.avgKcal >= 3000}/>
@@ -1589,8 +1599,9 @@ function WeekTab() {
               <R.CartesianGrid strokeDasharray="2 4" stroke="#E8E3D6" vertical={false}/>
               <R.XAxis dataKey="day" tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false}/>
               <R.YAxis domain={[0,100]} tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false}/>
-              <R.ReferenceLine y={100} stroke="#B8860B" strokeDasharray="3 3"/>
-              <R.ReferenceLine y={105} stroke="#E89A0F" strokeDasharray="3 3"/>
+              <R.ReferenceLine y={85} stroke="#FFD580" strokeDasharray="3 3"/>
+              <R.ReferenceLine y={95} stroke="#F4C13D" strokeDasharray="3 3"/>
+              <R.ReferenceLine y={100} stroke="#E89A0F" strokeDasharray="3 3"/>
               <R.Tooltip
                 contentStyle={{borderRadius:8,fontSize:12,border:'1px solid #E8E3D6'}}
                 formatter={(v, name, props) => {
@@ -1610,8 +1621,9 @@ function WeekTab() {
           </R.ResponsiveContainer>
         </div>
         <div className="chart-legend">
-          <span className="legend-dot" style={{background:'#E89A0F'}}></span><span style={{marginRight:10}}>🫘🫘 105점+</span>
-          <span className="legend-dot" style={{background:'#F4C13D'}}></span><span style={{marginRight:10}}>🫘 100점+</span>
+          <span className="legend-dot" style={{background:'#E89A0F'}}></span><span style={{marginRight:10}}>🫘×4 100점+</span>
+          <span className="legend-dot" style={{background:'#F4C13D'}}></span><span style={{marginRight:10}}>🫘🫘 95점+</span>
+          <span className="legend-dot" style={{background:'#FFD580'}}></span><span style={{marginRight:10}}>🫘 85점+</span>
           <span className="legend-dot" style={{background:'#FFD89C'}}></span><span>미달</span>
         </div>
       </div>
@@ -1896,12 +1908,12 @@ function MonthCalendar({ today }) {
 
   // 점수에 따른 색상 (낮음: 옅음 → 높음: 짙음)
   const scoreColor = (sc) => {
-    if (sc >= 105) return '#E89A0F';
-    if (sc >= 100) return '#F4C13D';
-    if (sc >= 95) return '#FFD580';
-    if (sc >= 60) return '#FFE8B8';
-    if (sc >= 30) return '#FFF1B8';
-    if (sc > 0)   return '#FFF8E7';
+    if (sc >= 100) return '#E89A0F';  // 콩알 4개 (가장 진함)
+    if (sc >= 95)  return '#F4C13D';  // 콩알 2개
+    if (sc >= 85)  return '#FFD580';  // 콩알 1개
+    if (sc >= 60)  return '#FFE8B8';
+    if (sc >= 30)  return '#FFF1B8';
+    if (sc > 0)    return '#FFF8E7';
     return '#fff';
   };
 
@@ -1942,7 +1954,7 @@ function MonthCalendar({ today }) {
               <span className="cal-day-num">{d}</span>
               {hasData && (
                 <span className="cal-day-info">
-                  {bn > 0 && <span className="cal-bean">{bn === 2 ? '🫘🫘' : '🫘'}</span>}
+                  {bn > 0 && <span className="cal-bean">{bn === 4 ? '🫘×4' : bn === 2 ? '🫘🫘' : '🫘'}</span>}
                   <span className="cal-score">{sc}</span>
                 </span>
               )}
@@ -1994,7 +2006,9 @@ function DayDetailModal({ date, data, onClose }) {
           <span style={{fontSize:14,color:'#94806B',marginLeft:6}}>점</span>
         </div>
         {bn > 0 && (
-          <div className="day-detail-beans">{bn === 2 ? '🫘🫘 콩알 2개' : '🫘 콩알 1개'} 받은 날!</div>
+          <div className="day-detail-beans">
+            {bn === 4 ? '🫘×4 콩알 4개' : bn === 2 ? '🫘🫘 콩알 2개' : '🫘 콩알 1개'} 받은 날!
+          </div>
         )}
 
         <div className="day-summary">
