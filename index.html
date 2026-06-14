@@ -730,15 +730,27 @@ const calcStreak = () => {
   return streak;
 };
 
+// ============================================================
+// 콩알 룰 변경 경계
+// 이 날짜 이전 데이터는 옛 룰로 받은 콩알 그대로 보존하고
+// 새 룰로 재계산하지 않음. 누적 13개로 고정 (사용자 보정값).
+// ============================================================
+const RULE_CHANGE_DATE = '2026-06-15';
+const PRE_RULE_BEANS = 13;
+
 // 한번 받은 콩알은 영구 보존 (점수 룰 변경 영향 받지 않음)
 const calcBestBeans = (data, dateKey) => {
+  // 룰 변경일 이전 데이터는 콩알 0 반환 (PRE_RULE_BEANS에 합쳐짐)
+  if (dateKey && dateKey < RULE_CHANGE_DATE) {
+    return 0;
+  }
   const sc = calcScore(data, dateKey);
   const earned = beansForScore(sc, data);
   return Math.max(data?.bestBeans || 0, earned);
 };
 
 const countBeans = () => {
-  let total = 0;
+  let total = PRE_RULE_BEANS;  // 룰 변경 전 누적
   ls.keys('daily:').forEach(k => {
     const d = ls.get(k);
     if (!d) return;
@@ -754,22 +766,29 @@ const migrateBestBeans = () => {
     const d = ls.get(k);
     if (!d || d.bestBeans != null) return;
     const dk = k.replace('daily:', '');
+    // 룰 변경일 이전 데이터는 마이그레이션 안 함 (어차피 0으로 반환됨)
+    if (dk < RULE_CHANGE_DATE) return;
     const earned = beansForScore(calcScore(d, dk), d);
     if (earned > 0) {
       ls.set(k, { ...d, bestBeans: earned });
     }
   });
 
-  // 수동 보정 (한 번만 실행) - 사용자가 점수 룰 변경 전에 얻은 콩알 보정
-  if (!ls.get('migrated:manual-fix-v1')) {
-    const fix = (date, beans) => {
-      const dayData = ls.get(`daily:${date}`);
-      if (dayData) {
-        ls.set(`daily:${date}`, { ...dayData, bestBeans: Math.max(dayData.bestBeans || 0, beans) });
+  // 옛 보정 (manual-fix-v1)은 이제 PRE_RULE_BEANS로 흡수돼서 필요 없음.
+  // 룰 변경 전 데이터에 잘못 들어간 bestBeans를 제거하는 1회 마이그레이션:
+  if (!ls.get('migrated:rule-change-2026-06-15')) {
+    ls.keys('daily:').forEach(k => {
+      const dk = k.replace('daily:', '');
+      if (dk >= RULE_CHANGE_DATE) return;
+      const d = ls.get(k);
+      if (!d) return;
+      // bestBeans 필드 제거 (재계산 시 영향 없게)
+      if (d.bestBeans != null) {
+        const { bestBeans, ...rest } = d;
+        ls.set(k, rest);
       }
-    };
-    fix('2026-05-20', 2);  // 5월 20일: 콩알 2개
-    ls.set('migrated:manual-fix-v1', { done: true });
+    });
+    ls.set('migrated:rule-change-2026-06-15', { done: true });
   }
 };
 
