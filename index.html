@@ -89,6 +89,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .ledger-info{flex:1;min-width:0}
 .ledger-reason{font-size:13px;font-weight:600;color:#2D3748}
 .ledger-meta{font-size:11px;color:#6B7C9E;margin-top:2px;font-variant-numeric:tabular-nums}
+
+/* 부모 전용: 콩알 수동 조정 */
+.bean-adjuster{background:#FFF1B8;border:1px dashed #F4D77E;border-radius:12px;padding:12px;margin-bottom:14px;text-align:left}
+.bean-adjuster-title{font-size:13px;font-weight:700;color:#B8860B;margin-bottom:8px}
+.bean-adjuster-row{display:flex;gap:6px;align-items:center}
 .sync-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:5px 8px;border-radius:999px;border:1px solid transparent;transition:all .2s}
 .sync-spin{display:inline-block;animation:spin360 1s linear infinite}
 @keyframes spin360{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
@@ -819,6 +824,20 @@ const migrateBestBeans = () => {
       ls.set(k, rest);
     });
     ls.set('migrated:remove-best-beans-v3', { done: true });
+  }
+
+  // 콩알 강제 14개 보정 (사용자 명시) - 한 번만
+  if (!ls.get('migrated:force-beans-14')) {
+    const current = countBeans();
+    if (current > 14) {
+      saveLedgerEntry({
+        id: newLedgerId(),
+        beans: 14 - current,  // 음수 보정
+        reason: '관리자 보정 (콩알 14개로 정리)',
+        ts: Date.now(),
+      });
+    }
+    ls.set('migrated:force-beans-14', { done: true });
   }
 };
 
@@ -1750,6 +1769,52 @@ function SyncBadge({ sync }) {
 // readonly=true: 아동 모드 (이름만 추가, 가격 입력 불가)
 // readonly=false: 부모 모드 (가격 설정, 삭제 가능)
 // ============================================================
+// ============================================================
+// 부모 전용: 콩알 수동 조정 (보정용)
+// ============================================================
+function BeanAdjuster({ currentBeans, onAdjusted }) {
+  const [target, setTarget] = useState('');
+  const [reason, setReason] = useState('');
+
+  const applyAdjustment = () => {
+    const n = parseInt(target, 10);
+    if (isNaN(n) || n < 0) return;
+    const diff = n - currentBeans;
+    if (diff === 0) return;
+    saveLedgerEntry({
+      id: newLedgerId(),
+      beans: diff,
+      reason: reason.trim() || `관리자 보정 (${n}개로 조정)`,
+      ts: Date.now(),
+    });
+    setTarget('');
+    setReason('');
+    if (onAdjusted) onAdjusted();
+  };
+
+  return (
+    <div className="bean-adjuster">
+      <div className="bean-adjuster-title">🔧 콩알 수동 조정</div>
+      <div className="bean-adjuster-row">
+        <input type="tel" inputMode="numeric" pattern="[0-9]*"
+               value={target}
+               onChange={(e) => setTarget(e.target.value.replace(/[^0-9]/g,''))}
+               placeholder={`목표 (현재 ${currentBeans})`}
+               className="form-input" style={{flex:1,fontSize:14,padding:'8px 12px'}}/>
+        <button onClick={applyAdjustment}
+                disabled={!target || parseInt(target,10) === currentBeans}
+                style={{background:'#6B8FE5',color:'#fff',padding:'8px 14px',borderRadius:10,fontSize:13,fontWeight:700}}>
+          조정
+        </button>
+      </div>
+      <input type="text" value={reason}
+             onChange={(e) => setReason(e.target.value)}
+             placeholder="이유 (선택)"
+             className="form-input" style={{width:'100%',marginTop:6,fontSize:12,padding:'6px 12px'}}/>
+    </div>
+  );
+}
+
 function RewardsModal({ beansCount, onClose, readonly = true, onBeansChange }) {
   const [wishes, setWishes] = useState(() => getAllWishes());
   const [ledger, setLedger] = useState(() => getAllLedger());
@@ -1938,6 +2003,9 @@ function RewardsModal({ beansCount, onClose, readonly = true, onBeansChange }) {
             </div>
           )}
         </div>
+
+        {/* 부모 모드: 콩알 수동 조정 */}
+        {!readonly && <BeanAdjuster currentBeans={currentBeans} onAdjusted={refreshLedger}/>}
 
         {/* 받은 기록 (ledger) */}
         {ledger.length > 0 && (
