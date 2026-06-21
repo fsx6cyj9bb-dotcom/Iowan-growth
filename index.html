@@ -424,13 +424,59 @@ const applyServerData = (serverData) => {
   return changed;
 };
 
-// 클라우드 동기화 비활성 (localStorage만 사용)
+// 클라우드 동기화 (Netlify Blobs via /api/sync)
+// 모든 호출은 try-catch로 보호 — 실패해도 절대 throw하지 않는다
+// (옛 버전에서 throw가 useEffect를 막아 며칠간 빈 화면 사태 발생)
 const pullFromServer = async () => {
-  notifySyncStatus('idle', Date.now());
-  return false;
+  notifySyncStatus('pulling');
+  try {
+    const res = await fetch(SYNC_URL, { method: 'GET', cache: 'no-store' });
+    if (!res.ok) throw new Error(`GET ${res.status}`);
+    const json = await res.json();
+    // 서버에 데이터 없음 → 정상 (첫 사용자)
+    if (!json || json.data == null) {
+      notifySyncStatus('idle', Date.now());
+      return false;
+    }
+    const changed = applyServerData(json.data);
+    notifySyncStatus('idle', json.updatedAt || Date.now());
+    return changed;
+  } catch (e) {
+    console.error('Pull failed:', e);
+    notifySyncStatus('error');
+    return false;
+  }
 };
-const pushToServer = async () => false;
-function schedulePushToServer() {}
+
+const pushToServer = async () => {
+  notifySyncStatus('pushing');
+  try {
+    const payload = getAllLocalData();
+    const res = await fetch(SYNC_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(`POST ${res.status}`);
+    const json = await res.json().catch(() => ({}));
+    notifySyncStatus('idle', json.savedAt || Date.now());
+    return true;
+  } catch (e) {
+    console.error('Push failed:', e);
+    notifySyncStatus('error');
+    return false;
+  }
+};
+
+// ls.set/ls.remove가 동기화 대상 키를 건드릴 때마다 호출됨
+// 1.2초 debounce 후 push (연속 토글 시 한 번에 모아서 전송)
+function schedulePushToServer() {
+  if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+  syncDebounceTimer = setTimeout(() => {
+    syncDebounceTimer = null;
+    pushToServer();
+  }, 1200);
+}
 
 const todayKey = (d = new Date()) => {
   const yyyy = d.getFullYear();
@@ -1743,9 +1789,25 @@ function WeekTab() {
 }
 
 function SyncBadge({ sync }) {
+  // 4상태: pulling / pushing / idle / error  (TECH_SPEC §4.3)
+  const status = sync?.status || 'idle';
+  let bg, fg, border, icon, label, spin = false;
+  if (status === 'pulling') {
+    bg = '#FAF7EF'; fg = '#94806B'; border = '#E8E3D6';
+    icon = '↻'; label = '받는중'; spin = true;
+  } else if (status === 'pushing') {
+    bg = '#FAF7EF'; fg = '#94806B'; border = '#E8E3D6';
+    icon = '↻'; label = '저장중'; spin = true;
+  } else if (status === 'error') {
+    bg = '#FFE8D6'; fg = '#C75D2C'; border = '#FFD4B0';
+    icon = '⚠'; label = '오프라인';
+  } else {
+    bg = '#E8F5E0'; fg = '#3D7C3D'; border = '#A8D8A8';
+    icon = '☁'; label = '동기화됨';
+  }
   return (
-    <div className="sync-badge" style={{background:'#FAF7EF',color:'#94806B',borderColor:'#E8E3D6'}}>
-      <span>💾</span><span>로컬</span>
+    <div className="sync-badge" style={{background:bg, color:fg, borderColor:border}}>
+      <span className={spin ? 'sync-spin' : ''}>{icon}</span><span>{label}</span>
     </div>
   );
 }
