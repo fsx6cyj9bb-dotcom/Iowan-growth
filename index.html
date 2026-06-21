@@ -11,11 +11,11 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23FFB85C'/%3E%3Ctext x='50' y='70' font-size='56' text-anchor='middle'%3E🌱%3C/text%3E%3C/svg%3E">
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
-<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script crossorigin src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
-<script crossorigin src="https://unpkg.com/recharts@2/umd/Recharts.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/Recharts/2.12.7/Recharts.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;-webkit-user-select:none;user-select:none}
 input{-webkit-user-select:auto;user-select:auto}
@@ -35,6 +35,2551 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 @keyframes popIn{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
 .bean-big{font-size:80px;margin-bottom:12px;display:inline-block;animation:spin 1s ease}
 @keyframes spin{0%{transform:rotate(0) scale(0.5)}50%{transform:rotate(180deg) scale(1.2)}100%{transform:rotate(360deg) scale(1)}}
+.bean-title{font-family:'Fraunces',serif;font-size:24px;font-weight:600;color:#B8860B;margin-bottom:6px}
+.bean-msg{font-size:14px;color:#5A4A3A;margin-bottom:20px}
+.bean-count-big{font-family:'Fraunces',serif;font-size:36px;font-weight:600;color:#B8860B;font-variant-numeric:tabular-nums}
+.bean-close{margin-top:16px;background:#FFB85C;color:#fff;padding:10px 24px;border-radius:12px;font-size:14px;font-weight:600}
+
+/* 비밀번호 모달 */
+.pw-modal{max-width:280px}
+.pw-emoji{font-size:48px;line-height:1;margin-bottom:8px}
+.pw-title{font-size:18px;font-weight:700;color:#5A4A3A}
+.pw-subtitle{font-size:13px;color:#94806B;margin-top:4px;margin-bottom:20px}
+.pw-dots{display:flex;justify-content:center;gap:14px;margin:8px 0 16px}
+.pw-dots.error{animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.pw-dot{width:16px;height:16px;border-radius:50%;background:#F0EAE0;border:2px solid #D8CFC0;transition:all .2s}
+.pw-dot.filled{background:#5A4A3A;border-color:#5A4A3A;transform:scale(1.1)}
+.pw-dots.error .pw-dot.filled{background:#C4654D;border-color:#C4654D}
+.pw-input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+.pw-error-msg{font-size:13px;color:#C4654D;margin-top:4px;font-weight:600}
+
+.kid-header{padding:24px 4px 16px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.kid-greeting{font-family:'Fraunces',serif;font-size:22px;font-weight:600;letter-spacing:-.3px}
+.kid-date{font-size:12px;color:#94806B;margin-top:2px}
+.header-badges{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+
+.beans-badge{display:inline-flex;align-items:center;gap:4px;background:#FFF1B8;color:#B8860B;font-size:13px;font-weight:700;padding:6px 10px;border-radius:999px;border:1px solid #F4D77E;font-variant-numeric:tabular-nums;cursor:pointer;transition:transform .15s}
+.beans-badge:active{transform:scale(.92);background:#FFE989}
+.beans-badge .b-emoji{font-size:14px}
+
+/* 보상 목록 */
+.rewards-modal{max-width:340px;text-align:center}
+.rewards-list{display:flex;flex-direction:column;gap:10px;margin:8px 0 14px;text-align:left}
+.reward-item{display:flex;gap:12px;align-items:center;background:#F0EAE0;border-radius:14px;padding:12px;border:2px solid #E0D8C8;transition:all .2s}
+.reward-item.on{background:#FFF1B8;border-color:#F4C13D;box-shadow:0 2px 8px rgba(244,193,61,0.25)}
+.reward-icon{font-size:30px;width:44px;height:44px;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.reward-item.on .reward-icon{background:#FFE989}
+.reward-body{flex:1;min-width:0}
+.reward-name{font-size:14px;font-weight:700;color:#2D3748}
+.reward-item.on .reward-name{color:#7E5C00}
+.reward-need{font-size:11px;color:#94806B;margin-top:2px}
+.reward-bar{height:6px;background:#fff;border-radius:999px;overflow:hidden;margin-top:6px}
+.reward-bar-fill{height:100%;background:linear-gradient(90deg,#F4C13D,#FFB85C);border-radius:999px;transition:width .6s ease}
+.reward-item.no-price{background:#FCE4D6;border-color:#F4B580}
+.reward-item.no-price .reward-icon{background:#FFE4D6}
+.wish-add{background:#FAF7EF;border-radius:12px;padding:12px;margin-bottom:14px;border:1px dashed #D8CFC0}
+.wish-add-lbl{font-size:13px;font-weight:700;color:#5A4A3A;margin-bottom:8px;text-align:left}
+
+/* 받은 기록 (ledger) */
+.ledger-section{background:#F0F4FF;border-radius:12px;padding:12px;margin-bottom:14px;text-align:left}
+.ledger-title{font-size:13px;font-weight:700;color:#3D5BA5;margin-bottom:8px}
+.ledger-list{display:flex;flex-direction:column;gap:6px}
+.ledger-item{display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:10px;padding:8px 10px;border:1px solid #DCE3F5}
+.ledger-info{flex:1;min-width:0}
+.ledger-reason{font-size:13px;font-weight:600;color:#2D3748}
+.ledger-meta{font-size:11px;color:#6B7C9E;margin-top:2px;font-variant-numeric:tabular-nums}
+
+/* 부모 전용: 콩알 수동 조정 */
+.bean-adjuster{background:#FFF1B8;border:1px dashed #F4D77E;border-radius:12px;padding:12px;margin-bottom:14px;text-align:left}
+.bean-adjuster-title{font-size:13px;font-weight:700;color:#B8860B;margin-bottom:8px}
+.bean-adjuster-row{display:flex;gap:6px;align-items:center}
+.sync-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:5px 8px;border-radius:999px;border:1px solid transparent;transition:all .2s}
+.sync-spin{display:inline-block;animation:spin360 1s linear infinite}
+@keyframes spin360{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.streak{display:inline-flex;align-items:center;gap:4px;background:#FFE8D6;color:#C75D2C;font-size:13px;font-weight:700;padding:6px 10px;border-radius:999px;border:1px solid #FFD4B0}
+.secret-btn{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;font-size:14px;color:#94806B;transition:all .2s;flex-shrink:0}
+.secret-btn:active{transform:scale(.92);background:rgba(255,255,255,.7)}
+
+.score-card{background:#fff;border-radius:24px;padding:24px;margin-bottom:14px;box-shadow:0 4px 20px rgba(255,184,92,.18);border:2px solid #FFE8B8;text-align:center;position:relative;overflow:hidden}
+.character{font-size:64px;line-height:1;margin-bottom:8px;display:inline-block;animation:bob 3s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.score-num{font-family:'Fraunces',serif;font-size:56px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.score-unit{font-size:18px;color:#94806B;font-weight:500;margin-left:2px}
+.score-msg{font-size:14px;color:#5A4A3A;margin-top:8px;font-weight:500}
+.score-bar{height:8px;background:#FFF0D8;border-radius:999px;overflow:hidden;margin-top:14px;position:relative}
+.score-bar-fill{height:100%;background:linear-gradient(90deg,#FFB85C,#FF8A4C);border-radius:999px;transition:width .6s cubic-bezier(.4,1.5,.6,1)}
+.score-bar-mark{position:absolute;top:-2px;height:12px;width:2px;background:#B8860B}
+.score-mark-lbl{position:absolute;top:14px;font-size:10px;color:#B8860B;font-weight:600;transform:translateX(-50%);white-space:nowrap}
+
+.mission{background:#fff;border-radius:20px;padding:18px;margin-bottom:12px;border:2px solid transparent;transition:all .2s;position:relative;overflow:hidden}
+.mission.done{border-color:#A8D8A8;background:linear-gradient(180deg,#F0FAF0,#fff)}
+.mission-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.mission-emoji{font-size:24px;line-height:1}
+.mission-title{font-size:16px;font-weight:700;flex:1}
+.mission-star{font-size:18px;opacity:.25;transition:all .3s}
+.mission.done .mission-star{opacity:1;transform:scale(1.1) rotate(15deg)}
+.mission-sub{font-size:12px;color:#94806B;margin-top:-6px;margin-bottom:10px;margin-left:34px}
+.mission-meta{font-size:12px;color:#94806B;font-weight:600}
+
+.sleep-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.time-box{background:#FFF8E7;border-radius:12px;padding:10px;border:1px solid #FFE8B8}
+.time-box label{font-size:11px;color:#94806B;font-weight:600;display:block;margin-bottom:2px}
+.time-box input{border:none;background:transparent;font-size:18px;font-weight:700;width:100%;padding:0;font-variant-numeric:tabular-nums;font-family:inherit}
+.time-result{background:#FFB85C;color:#fff;border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.time-result-num{font-family:'Fraunces',serif;font-size:24px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.time-result-lbl{font-size:10px;opacity:.85;margin-top:2px;font-weight:600}
+
+.meal-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.meal-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s;position:relative}
+.meal-btn:active{transform:scale(.95)}
+.meal-btn.checked{background:#E8F5E0;border-color:#A8D8A8;animation:pop .3s ease}
+.meal-btn.fast{background:#FFF1B8;border-color:#F4C13D;box-shadow:0 0 0 1px #F4C13D inset}
+.meal-fast{position:absolute;top:2px;right:3px;font-size:13px;animation:fastPop .5s ease}
+@keyframes fastPop{0%{transform:scale(0) rotate(-30deg)}60%{transform:scale(1.4) rotate(10deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
+.meal-emoji{font-size:22px;line-height:1}
+.meal-lbl{font-size:11px;font-weight:700;color:#5A4A3A}
+.meal-btn.checked .meal-lbl{color:#3D7C3D}
+.meal-btn.fast .meal-lbl{color:#B8860B;font-weight:700}
+
+.ex-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.ex-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:12px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s;position:relative}
+.ex-btn:active{transform:scale(.92)}
+.ex-btn.active{background:#FFE4D6;border-color:#FF8A4C}
+.ex-btn.auto{background:#E8E8FA;border-color:#9B9BD9;cursor:default}
+.ex-btn.bonus{box-shadow:0 0 0 1px #F4C13D inset}
+.ex-btn.bonus.active{background:#FFF1B8;border-color:#F4C13D}
+.ex-emoji{font-size:24px;line-height:1}
+.ex-lbl{font-size:11px;font-weight:700;color:#5A4A3A}
+.ex-btn.active .ex-lbl{color:#C75D2C}
+.ex-btn.auto .ex-lbl{color:#4A4A99}
+.ex-auto-tag{position:absolute;top:4px;right:4px;background:#9B9BD9;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:6px;line-height:1.4}
+
+.milk-row{display:flex;align-items:center;gap:10px}
+.milk-cups{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;background:#FFF8E7;border-radius:12px;padding:10px;border:1px solid #FFE8B8;min-height:48px}
+.milk-cup{font-size:24px;line-height:1;filter:grayscale(1) opacity(0.3);transition:all .25s cubic-bezier(.4,1.5,.6,1)}
+.milk-cup.on{filter:none;transform:scale(1.1)}
+.milk-cup.bonus{animation:milkBonus .6s ease}
+@keyframes milkBonus{0%{transform:scale(1.1)}50%{transform:scale(1.5) rotate(-10deg)}100%{transform:scale(1.1) rotate(0)}}
+.milk-extra{font-size:13px;font-weight:700;color:#FF8A4C;margin-left:4px}
+
+.cond-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.cond-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:8px 0;display:flex;justify-content:center;align-items:center;font-size:26px;line-height:1;transition:all .15s}
+.cond-btn:active{transform:scale(.9)}
+.cond-btn.active{background:#FFF1B8;border-color:#F4C13D;transform:scale(1.05)}
+
+.routine-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.routine-row-2{grid-template-columns:1fr 1fr;gap:8px}
+.routine-row-3{grid-template-columns:repeat(3,1fr);gap:8px}
+.routine-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:12px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s}
+.routine-btn:active{transform:scale(.96)}
+.routine-btn.checked,.routine-btn.done{background:#E8F5E0;border-color:#A8D8A8;animation:pop .3s ease}
+.routine-emoji{font-size:24px;line-height:1}
+.routine-row-2 .routine-emoji,.routine-row-3 .routine-emoji{font-size:28px}
+.routine-lbl{font-size:11px;font-weight:700;color:#5A4A3A;text-align:center;line-height:1.2}
+.routine-row-2 .routine-lbl,.routine-row-3 .routine-lbl{font-size:13px}
+.routine-btn.checked .routine-lbl,.routine-btn.done .routine-lbl{color:#3D7C3D}
+.routine-pts{font-size:10px;color:#94806B;font-weight:600}
+.routine-btn.checked .routine-pts,.routine-btn.done .routine-pts{color:#3D7C3D}
+
+.class-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.class-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:14px;padding:14px 8px;display:flex;align-items:center;gap:10px;transition:all .15s}
+.class-btn:active{transform:scale(.97)}
+.class-btn.checked{background:#E8E8FA;border-color:#9B9BD9;animation:pop .3s ease}
+.class-emoji{font-size:24px;line-height:1}
+.class-lbl{font-size:14px;font-weight:700;color:#5A4A3A}
+.class-btn.checked .class-lbl{color:#4A4A99}
+.no-class{background:#FFF8E7;border:2px dashed #FFD4B0;border-radius:14px;padding:18px;text-align:center;color:#94806B}
+.no-class-emoji{font-size:32px;margin-bottom:4px}
+.no-class-msg{font-size:14px;font-weight:600;color:#5A4A3A}
+.no-class-sub{font-size:11px;color:#94806B;margin-top:2px}
+
+.hw-block{margin-bottom:14px}
+.hw-block:last-child{margin-bottom:0}
+.hw-block-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.hw-block-emoji{font-size:18px}
+.hw-block-title{font-size:14px;font-weight:600;flex:1}
+.hw-block-meta{font-size:13px;font-weight:700;color:#94806B;font-variant-numeric:tabular-nums}
+.hw-block.done .hw-block-meta{color:#3D7C3D}
+.hw-row{display:flex;align-items:center;gap:10px}
+.hw-btn{width:36px;height:36px;border-radius:10px;background:#FFF8E7;border:1px solid #FFE8B8;font-size:18px;font-weight:700;color:#C75D2C;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.hw-btn:active{transform:scale(.9);background:#FFE4D6}
+.hw-btn:disabled{opacity:.3;color:#94806B}
+.hw-bar{flex:1;height:10px;background:#FFF0D8;border-radius:999px;overflow:hidden}
+.hw-bar-fill{height:100%;background:linear-gradient(90deg,#FFB85C,#FF8A4C);border-radius:999px;transition:width .4s cubic-bezier(.4,1.5,.6,1)}
+.hw-slider{-webkit-appearance:none;appearance:none;flex:1;height:14px;border-radius:999px;outline:none;margin:0;padding:0;cursor:pointer;-webkit-user-select:none;user-select:none}
+.hw-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:26px;height:26px;border-radius:50%;background:#FF8A4C;border:3px solid #fff;box-shadow:0 2px 6px rgba(255,138,76,.4);cursor:pointer}
+.hw-slider::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:#FF8A4C;border:3px solid #fff;box-shadow:0 2px 6px rgba(255,138,76,.4);cursor:pointer}
+.hw-slider:active::-webkit-slider-thumb{transform:scale(1.15)}
+.hw-draw-btn{background:#FFF8E7;border:2px solid #FFE8B8;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px;width:100%;transition:all .15s}
+.hw-draw-btn:active{transform:scale(.98)}
+.hw-draw-btn.checked{background:#E8F5E0;border-color:#A8D8A8}
+.hw-draw-check{width:24px;height:24px;border-radius:8px;background:#fff;border:2px solid #FFD4B0;display:flex;align-items:center;justify-content:center;font-size:14px;color:transparent}
+.hw-draw-btn.checked .hw-draw-check{background:#A8D8A8;border-color:#A8D8A8;color:#fff}
+.hw-draw-lbl{font-size:14px;font-weight:700;color:#5A4A3A;flex:1;text-align:left}
+.hw-draw-btn.checked .hw-draw-lbl{color:#3D7C3D}
+
+.parent-app{background:#F5F1EA;min-height:100vh;min-height:100dvh}
+.parent-header{padding:20px 16px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #E8E3D6;background:#F5F1EA;position:sticky;top:0;z-index:10}
+.parent-back{width:36px;height:36px;border-radius:50%;background:#fff;border:1px solid #E8E3D6;font-size:18px;color:#2D3748}
+.parent-back:active{transform:scale(.95)}
+.parent-title{font-family:'Fraunces',serif;font-size:22px;font-weight:600;letter-spacing:-.3px;flex:1}
+.parent-bean-count{display:inline-flex;align-items:center;gap:4px;background:#FFF1B8;color:#B8860B;font-size:13px;font-weight:700;padding:6px 10px;border-radius:999px;border:1px solid #F4D77E;font-variant-numeric:tabular-nums}
+.parent-tabs{display:flex;background:#fff;border-radius:12px;padding:4px;margin:14px 16px;gap:2px;border:1px solid #E8E3D6}
+.parent-tab{flex:1;padding:8px;font-size:13px;font-weight:600;color:#94806B;background:transparent;border-radius:8px}
+.parent-tab.active{background:#1C2433;color:#fff}
+.parent-content{padding:0 16px 80px}
+
+.card{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid #EBE6D9}
+.card-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.card-title{font-size:14px;font-weight:600;flex:1}
+.card-meta{font-size:12px;color:#8B8478;font-variant-numeric:tabular-nums}
+
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat-card{background:#fff;border:1px solid #EBE6D9;border-radius:14px;padding:14px}
+.stat-lbl{font-size:11px;color:#8B8478;font-weight:500;margin-bottom:6px}
+.stat-val-row{display:flex;align-items:baseline;gap:4px}
+.stat-val{font-family:'Fraunces',serif;font-size:24px;font-weight:500;font-variant-numeric:tabular-nums}
+.stat-unit{font-size:12px;color:#8B8478;font-weight:500}
+.stat-tgt{font-size:10px;margin-top:4px;font-weight:500}
+
+.summary-card{background:linear-gradient(135deg,#1C2433 0%,#2D5F4F 100%);color:#fff;border-radius:16px;padding:18px;margin-bottom:12px}
+.summary-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.summary-lbl{font-size:11px;opacity:.75;display:flex;align-items:center;gap:4px}
+.summary-val-row{display:flex;align-items:baseline;gap:4px}
+.summary-val{font-family:'Fraunces',serif;font-size:28px;font-weight:500;font-variant-numeric:tabular-nums}
+.summary-unit{font-size:13px;opacity:.7}
+.summary-tgt{font-size:10px;opacity:.6;margin-bottom:6px}
+.progress-track{height:4px;background:rgba(255,255,255,.15);border-radius:999px;overflow:hidden}
+.progress-fill{height:100%;background:#fff;transition:width .4s}
+
+.form-box{background:#FAF7EF;border-radius:12px;padding:14px;margin-bottom:12px;display:flex;flex-direction:column;gap:10px}
+.form-row{display:flex;align-items:center;gap:12px}
+.form-lbl{font-size:12px;color:#8B8478;width:70px;flex-shrink:0}
+.form-input{flex:1;border:1px solid #E8E3D6;background:#fff;border-radius:8px;padding:8px 12px;font-size:14px;font-variant-numeric:tabular-nums;font-family:inherit}
+.form-actions{display:flex;gap:8px;justify-content:flex-end}
+.btn-cancel{background:transparent;border:1px solid #E8E3D6;color:#6B6759;padding:8px 16px;border-radius:8px;font-size:13px}
+.btn-save{background:#2D5F4F;color:#fff;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:500}
+.btn-add{background:#1C2433;color:#fff;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:500}
+
+.record-list{display:flex;flex-direction:column}
+.record-row{display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid #F0EBDE}
+.record-row:last-child{border-bottom:none}
+.record-date{font-size:12px;color:#8B8478;width:80px;flex-shrink:0;font-variant-numeric:tabular-nums}
+.record-vals{flex:1;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.record-val{font-size:13px;font-weight:500;font-variant-numeric:tabular-nums}
+.record-muted{font-size:12px;color:#8B8478}
+.record-sep{color:#C8C2B5}
+.del-btn{width:24px;height:24px;border-radius:50%;color:#C8C2B5;font-size:18px}
+
+.backup-card{background:#fff;border-radius:16px;padding:18px;border:1px solid #EBE6D9;margin-bottom:12px}
+.backup-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.backup-icon{font-size:20px}
+.backup-title{font-size:15px;font-weight:600}
+.backup-desc{font-size:12px;color:#8B8478;line-height:1.5;margin-bottom:14px}
+.backup-btn{padding:12px;border-radius:10px;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+.btn-export{background:#2D5F4F;color:#fff}
+.btn-import{background:#FAF7EF;color:#2D3748;border:1px solid #E8E3D6}
+.btn-danger{background:#fff;color:#C75D2C;border:1px solid #FFD4B0;font-size:12px;padding:10px}
+
+.chart-wrap{height:180px;margin-top:8px}
+.chart-legend{display:flex;align-items:center;gap:6px;font-size:11px;color:#8B8478;margin-top:8px}
+.legend-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;height:100dvh;gap:12px}
+.loading-emoji{font-size:48px;animation:bob 1.5s ease-in-out infinite}
+.loading-text{font-family:'Fraunces',serif;font-size:18px;color:#5A4A3A}
+
+.footer-hint{text-align:center;padding:20px 0 8px;font-size:11px;color:#A89B7A}
+
+/* 캘린더 */
+.cal-nav-btn{width:28px;height:28px;border-radius:8px;background:#F0EAE0;color:#5A4A3A;font-size:18px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;margin-left:4px;line-height:1}
+.cal-nav-btn:active{transform:scale(.92);background:#E0D8C8}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:8px;margin-bottom:4px}
+.cal-weekday{text-align:center;font-size:11px;font-weight:700;color:#94806B;padding:4px 0}
+.cal-weekday.sun{color:#C4654D}
+.cal-weekday.sat{color:#3D6BC4}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-cell{aspect-ratio:1;border-radius:8px;border:1.5px solid transparent;background:#fff;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;padding:3px 1px 1px;font-size:10px;color:#5A4A3A;position:relative;transition:transform .15s}
+.cal-cell.empty{background:transparent;border:none}
+.cal-cell.future{opacity:.3;background:#FAF7EF}
+.cal-cell:not(:disabled):active{transform:scale(.92)}
+.cal-cell.has{cursor:pointer}
+.cal-cell.today{border-color:#FF8A4C;box-shadow:0 0 0 1px #FF8A4C inset}
+.cal-day-num{font-size:11px;font-weight:700;line-height:1}
+.cal-day-info{display:flex;flex-direction:column;align-items:center;line-height:1;margin-top:auto}
+.cal-bean{font-size:8px;line-height:1}
+.cal-score{font-size:9px;font-weight:700;color:#5A4A3A;font-variant-numeric:tabular-nums;line-height:1.1}
+
+/* 날짜 상세 모달 */
+.day-detail-modal{max-width:320px}
+.day-detail-date{font-size:13px;color:#94806B;text-align:center;font-weight:600}
+.day-detail-score{text-align:center;margin-top:6px;display:flex;align-items:baseline;justify-content:center}
+.day-detail-beans{text-align:center;font-size:14px;color:#B8860B;font-weight:700;margin-top:4px}
+.day-summary{margin-top:14px;background:#FAF7EF;border-radius:12px;padding:10px;text-align:left}
+.day-row{display:flex;justify-content:space-between;align-items:center;padding:6px 4px;border-bottom:1px solid #F0EAE0;font-size:13px}
+.day-row:last-child{border-bottom:none}
+.day-row-lbl{color:#5A4A3A;font-weight:600}
+.day-row-val{color:#2D3748;font-weight:700;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div id="root">
+  <div id="boot-fallback" style="text-align:center;padding:40px 20px;font-family:sans-serif;color:#5A4A3A">
+    <div style="font-size:48px;margin-bottom:8px">⏳</div>
+    <div style="font-size:14px">앱 로드 중...</div>
+    <div id="boot-fallback-error" style="margin-top:24px;font-size:13px;color:#94806B;display:none">
+      <p>오래 걸리네요. 다음을 시도해보세요:</p>
+      <ul style="text-align:left;display:inline-block;font-size:12px">
+        <li>인터넷 연결 확인</li>
+        <li>사파리 캐시 무시하고 새로고침</li>
+        <li>다른 브라우저로 접속</li>
+      </ul>
+      <p style="margin-top:12px;font-size:11px">에러 콘솔 메시지가 있으면 캡처해서 알려주세요.</p>
+    </div>
+  </div>
+</div>
+<script>
+  // 5초 후에도 로드 안 되면 진단 메시지 표시
+  setTimeout(function(){
+    var el = document.getElementById('boot-fallback-error');
+    if (el && document.getElementById('boot-fallback')) el.style.display = 'block';
+  }, 5000);
+</script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef } = React;
+const R = window.Recharts;
+
+const ls = {
+  get: (k) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
+  set: (k, v) => {
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
+    // 자동 클라우드 동기화 트리거
+    if (typeof k === 'string' && (k.startsWith('daily:') || k.startsWith('monthly:') || k.startsWith('wishlist:') || k.startsWith('ledger:') || k.startsWith('migrated:'))) {
+      schedulePushToServer();
+    }
+  },
+  remove: (k) => {
+    try { localStorage.removeItem(k); } catch {}
+    if (typeof k === 'string' && (k.startsWith('daily:') || k.startsWith('monthly:') || k.startsWith('wishlist:') || k.startsWith('ledger:') || k.startsWith('migrated:'))) {
+      schedulePushToServer();
+    }
+  },
+  keys: (prefix) => {
+    const out = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(prefix)) out.push(k);
+    }
+    return out;
+  }
+};
+
+// ============================================================
+// 클라우드 동기화 (Netlify Blobs API 사용)
+// ============================================================
+const SYNC_URL = '/api/sync';
+let syncDebounceTimer = null;
+let syncStatusCallbacks = new Set();
+let lastSyncedAt = null;
+let syncStatus = 'idle'; // 'idle' | 'pulling' | 'pushing' | 'error'
+
+const notifySyncStatus = (status, time) => {
+  syncStatus = status;
+  if (time) lastSyncedAt = time;
+  syncStatusCallbacks.forEach(cb => cb(status, lastSyncedAt));
+};
+
+const SYNCED_KEY_PREFIXES = ['daily:', 'monthly:', 'wishlist:', 'ledger:', 'migrated:'];
+const isSyncedKey = (k) => typeof k === 'string' && SYNCED_KEY_PREFIXES.some(p => k.startsWith(p));
+
+const getAllLocalData = () => {
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (isSyncedKey(k)) {
+      try { data[k] = JSON.parse(localStorage.getItem(k)); } catch {}
+    }
+  }
+  return data;
+};
+
+const applyServerData = (serverData) => {
+  if (!serverData || typeof serverData !== 'object') return false;
+  let changed = false;
+  Object.entries(serverData).forEach(([k, v]) => {
+    if (isSyncedKey(k)) {
+      try {
+        const local = localStorage.getItem(k);
+        const newStr = JSON.stringify(v);
+        if (local !== newStr) {
+          localStorage.setItem(k, newStr);
+          changed = true;
+        }
+      } catch {}
+    }
+  });
+  return changed;
+};
+
+// 클라우드 동기화 비활성 (localStorage만 사용)
+const pullFromServer = async () => {
+  notifySyncStatus('idle', Date.now());
+  return false;
+};
+const pushToServer = async () => false;
+function schedulePushToServer() {}
+
+const todayKey = (d = new Date()) => {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+const dayName = (key) => ['일','월','화','수','목','금','토'][new Date(key).getDay()];
+const formatKDate = (key) => {
+  const d = new Date(key);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${dayName(key)})`;
+};
+
+const calcSleep = (b, w) => {
+  if (!b || !w) return null;
+  const [bh, bm] = b.split(':').map(Number);
+  const [wh, wm] = w.split(':').map(Number);
+  let mins = (wh * 60 + wm) - (bh * 60 + bm);
+  if (mins <= 0) mins += 24 * 60;
+  return mins / 60;
+};
+
+const MEALS = [
+  { key: 'breakfast', label: '아침', emoji: '🍳', kcal: 700 },
+  { key: 'lunch',     label: '점심', emoji: '🍱', kcal: 800 },
+  { key: 'dinner',    label: '저녁', emoji: '🍚', kcal: 700 },
+  { key: 'snackPm',   label: '야식', emoji: '🍯', kcal: 200 },
+];
+const KCAL_TARGET = MEALS.reduce((s, m) => s + m.kcal, 0);
+
+const EXERCISES = [
+  { key: 'jumprope',   label: '줄넘기',   emoji: '🪀' },
+  { key: 'hockeyPrac', label: '하키연습', emoji: '🏑' },
+  { key: 'running',    label: '달리기',   emoji: '🏃' },
+  { key: 'hockey',     label: '하키',     emoji: '🏒' },
+  { key: 'climbing',   label: '클라이밍', emoji: '🧗' },
+  { key: 'other',      label: '기타',     emoji: '⚽' },
+];
+const COND = ['😫', '😕', '😐', '🙂', '😄'];
+
+const ROUTINES = [
+  { key: 'brushing', label: '양치하기',   emoji: '🪥', points: 2 },
+  { key: 'socks',    label: '양말 신기', emoji: '🧦', points: 1 },
+  { key: 'vitamin',  label: '비타민 2알', emoji: '💊', points: 1 },
+  { key: 'lotionAm', label: '로션 바르기', emoji: '🧴', points: 1 },
+];
+
+const EVENING_ROUTINES = [
+  { key: 'shower',     label: '샤워',  emoji: '🚿', points: 3 },
+  { key: 'brushingPm', label: '양치',  emoji: '🪥', points: 2 },
+  { key: 'lotion',     label: '로션',  emoji: '🧴', points: 2 },
+];
+
+const CLASS_INFO = {
+  piano:    { label: '피아노',     emoji: '🎹' },
+  climbing: { label: '클라이밍',   emoji: '🧗' },
+  english:  { label: '영어',       emoji: '🔤' },
+  writing:  { label: '논술',       emoji: '✍️' },
+  coding:   { label: '코딩',       emoji: '💻' },
+  hockey:   { label: '하키 학원',  emoji: '🏒' },
+};
+
+// 학원 → 운동 자동 체크 매핑
+const CLASS_TO_EXERCISE = {
+  hockey: 'hockey',
+  climbing: 'climbing',
+};
+
+const WEEKDAY_CLASSES = {
+  0: ['writing', 'hockey'],  // 일
+  1: ['piano', 'climbing'],
+  2: ['english'],
+  3: ['piano', 'writing'],
+  4: ['english', 'coding'],
+  5: ['piano', 'climbing'],
+  6: ['hockey'],             // 토
+};
+
+const getClassesForDay = (dateKey) => {
+  const dow = new Date(dateKey).getDay();
+  return WEEKDAY_CLASSES[dow] || [];
+};
+
+const emptyDay = () => ({
+  bedtime: '', wakeup: '',
+  meals: Object.fromEntries(MEALS.map(m => [m.key, false])),
+  exercises: {},
+  condition: 0,
+  routines: { brushing: false, socks: false, vitamin: false, lotionAm: false },
+  eveningRoutines: { shower: false, brushingPm: false, lotion: false },
+  homework: { math: 0, drawing: false, elementary: false, english: false },
+  classes: {},
+  milk: 0,
+  eggs: 0,
+  protein: 0,
+});
+
+// 점수별 콩알 개수
+// 보상 자격: 숙제 조건
+const HOMEWORK_FOR_DRAMA_MATH = 8;
+const HOMEWORK_FOR_BEAN_MATH = 5;    // 콩알 1개: 수학 5쪽
+const HOMEWORK_FOR_2BEAN_MATH = 8;   // 콩알 2개: 수학 8쪽
+const HOMEWORK_FOR_4BEAN_MATH = 10;  // 콩알 4개: 수학 10쪽
+const meetsHomeworkForDrama = (data) =>
+  (data?.homework?.math || 0) >= HOMEWORK_FOR_DRAMA_MATH;
+const meetsHomeworkForBeans = (data) =>
+  (data?.homework?.math || 0) >= HOMEWORK_FOR_BEAN_MATH;
+const meetsHomeworkFor2Beans = (data) =>
+  (data?.homework?.math || 0) >= HOMEWORK_FOR_2BEAN_MATH;
+const meetsHomeworkFor4Beans = (data) =>
+  (data?.homework?.math || 0) >= HOMEWORK_FOR_4BEAN_MATH;
+
+const beansForScore = (score, data) => {
+  if (score >= 100 && meetsHomeworkFor4Beans(data)) return 4;
+  if (score >= 95  && meetsHomeworkFor2Beans(data)) return 2;
+  if (score >= 85  && meetsHomeworkForBeans(data))  return 1;
+  return 0;
+};
+
+// ============================================================
+// 부모 화면 비밀번호 (4자리 숫자 - 여기서 변경 가능)
+// ============================================================
+const PARENT_PASSWORD = '0212';
+
+// ============================================================
+// 콩알 보상 (개수 / 이름 / 이모지)
+// ============================================================
+const REWARDS = [
+  { beans: 10,  emoji: '📝', name: '숙제 1회 면제권' },
+  { beans: 100, emoji: '🎧', name: '에어팟 프로' },
+];
+
+// ============================================================
+// 위시리스트 (아이가 추가, 부모가 콩알 가격 설정)
+// ============================================================
+const newWishId = () => 'w_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+
+const getAllWishes = () => {
+  const wishes = [];
+  ls.keys('wishlist:').forEach(k => {
+    const w = ls.get(k);
+    if (w && w.id) wishes.push(w);
+  });
+  // 정렬: 가격 설정된 거 먼저 (작은 가격 → 큰 가격), 미설정은 뒤에 (생성순)
+  wishes.sort((a, b) => {
+    const ap = a.beans == null ? Infinity : a.beans;
+    const bp = b.beans == null ? Infinity : b.beans;
+    if (ap === Infinity && bp === Infinity) return (a.createdAt || 0) - (b.createdAt || 0);
+    return ap - bp;
+  });
+  return wishes;
+};
+const saveWish = (w) => ls.set('wishlist:' + w.id, w);
+const removeWish = (id) => ls.remove('wishlist:' + id);
+
+// ============================================================
+// 콩알 차감 기록 (ledger) - 보상을 받을 때마다 음수로 기록
+// ============================================================
+const newLedgerId = () => 'l_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+
+const getAllLedger = () => {
+  const entries = [];
+  ls.keys('ledger:').forEach(k => {
+    const e = ls.get(k);
+    if (e && e.id) entries.push(e);
+  });
+  entries.sort((a, b) => (b.ts || 0) - (a.ts || 0));  // 최근부터
+  return entries;
+};
+const saveLedgerEntry = (e) => ls.set('ledger:' + e.id, e);
+const removeLedgerEntry = (id) => ls.remove('ledger:' + id);
+const ledgerTotal = () => {
+  let total = 0;
+  ls.keys('ledger:').forEach(k => {
+    const e = ls.get(k);
+    if (e && typeof e.beans === 'number') total += e.beans;
+  });
+  return total;
+};
+
+// 우유 점수: 1잔=1점, 3잔에서 보너스 +2 (3잔=5점)
+const milkScore = (n) => {
+  const cups = Math.max(0, n || 0);
+  let pts = cups;
+  if (cups >= 3) pts += 2;
+  return pts;
+};
+// 삶은 계란 점수: 우유와 동일 (1알=1점, 3알=5점)
+const eggScore = (n) => {
+  const cnt = Math.max(0, n || 0);
+  let pts = cnt;
+  if (cnt >= 3) pts += 2;
+  return pts;
+};
+// 더단백 음료 점수: 1개=2점
+const proteinScore = (n) => Math.max(0, n || 0) * 2;
+
+const calcScore = (data, dateKey) => {
+  if (!data) return 0;
+  let s = 0;
+
+  // 잠 (9시간 만점 25점, 8.5시간 20점, 0.1시간당 1점 선형)
+  const sl = calcSleep(data.bedtime, data.wakeup);
+  if (sl != null) {
+    const pts = Math.max(0, Math.min(25, Math.round(25 - (9 - sl) * 10)));
+    s += pts;
+  }
+
+  // 아침 루틴 (양치 2 + 양말 2 + 비타민 1 = 최대 5점, 개별 가산)
+  ROUTINES.forEach(r => {
+    if (data.routines?.[r.key]) s += (r.points || 0);
+  });
+
+  // 저녁 루틴: 샤워 3점 + 양치 2점 + 로션 2점 (각 항목 points 합산)
+  EVENING_ROUTINES.forEach(r => {
+    if (data.eveningRoutines?.[r.key]) s += (r.points || 0);
+  });
+
+  // 식사 - 메인 3끼 (24점, 각 8점)
+  const mainMeals = ['breakfast', 'lunch', 'dinner'];
+  mainMeals.forEach(k => {
+    const v = data.meals?.[k];
+    if (v) s += 8;
+    // 아침/저녁 20분 내 (값이 2): 추가 1점
+    if ((k === 'breakfast' || k === 'dinner') && v === 2) s += 1;
+  });
+
+  // 학원 (20점, 학원 없는 날 자동 만점)
+  const todayClasses = getClassesForDay(dateKey || todayKey());
+  if (todayClasses.length === 0) {
+    s += 20;
+  } else {
+    const done = todayClasses.filter(c => data.classes?.[c]).length;
+    s += Math.round((done / todayClasses.length) * 20);
+  }
+
+  // 숙제 (수학 1페이지=2점 최대 20점, 그림 3점, 엘리하이 3점, 화요일 영어 2점)
+  s += (data.homework?.math || 0) * 2;
+  s += data.homework?.drawing ? 3 : 0;
+  s += data.homework?.elementary ? 3 : 0;
+  // 화요일에만 영어 숙제 점수
+  const dk = dateKey || todayKey();
+  const dow = new Date(dk + 'T00:00:00').getDay();
+  if (dow === 2 && data.homework?.english) s += 2;
+
+  // 운동: 줄넘기 3점, 하키연습 3점, 달리기 2점 (각각 독립)
+  if (data.exercises?.jumprope) s += 3;
+  if (data.exercises?.hockeyPrac) s += 3;
+  if (data.exercises?.running) s += 2;
+
+  // 기본 점수 110 cap, 그 위에 우유 + 계란 + 더단백 음료 점수 추가
+  const baseScore = Math.min(110, s);
+  return baseScore + milkScore(data.milk) + eggScore(data.eggs) + proteinScore(data.protein);
+};
+
+const character = (s) => s >= 100 ? '🌳' : s >= 60 ? '🌿' : s >= 30 ? '🌱' : s >= 10 ? '🌰' : '😴';
+const message = (s, data) => {
+  const math = data?.homework?.math || 0;
+
+  // 콩알 4개 자격 (최종)
+  if (s >= 100 && math >= HOMEWORK_FOR_4BEAN_MATH) return '완벽! 콩알 4개! 🎉🫘🫘🫘🫘';
+
+  // 콩알 2개 자격
+  if (s >= 95 && math >= HOMEWORK_FOR_2BEAN_MATH) {
+    if (s >= 100 && math < HOMEWORK_FOR_4BEAN_MATH) {
+      const need = HOMEWORK_FOR_4BEAN_MATH - math;
+      return `콩알 2개! 수학 ${need}쪽 더 하면 콩알 4개! 🫘+`;
+    }
+    return '콩알 2개! 🫘🫘';
+  }
+
+  // 콩알 1개 자격
+  if (s >= 85 && math >= HOMEWORK_FOR_BEAN_MATH) {
+    if (s >= 95 && math < HOMEWORK_FOR_2BEAN_MATH) {
+      const need = HOMEWORK_FOR_2BEAN_MATH - math;
+      return `콩알 1개! 수학 ${need}쪽 더 하면 콩알 2개! 🫘+`;
+    }
+    return '콩알 1개! 🫘';
+  }
+
+  // 점수 도달인데 수학 부족
+  if (s >= 85) {
+    const need = Math.max(0, HOMEWORK_FOR_BEAN_MATH - math);
+    return `수학 ${need}쪽 더 해야 콩알! 📐`;
+  }
+
+  // 드라마 자격 (95+, 수학 8) - 콩알 자격 안 될 때만 표시 (수학 부족 케이스는 거의 없음)
+  if (s >= 85 && math >= HOMEWORK_FOR_DRAMA_MATH) {
+    const isEvening = new Date().getHours() >= 19;
+    const showerDone = !!data?.eveningRoutines?.shower;
+    if (isEvening && !showerDone) return '샤워하고 드라마 보자! 🚿';
+    return '드라마 시청권 획득! 🎬';
+  }
+
+  // 일반
+  if (s >= 60) return '좋아, 조금만 더!';
+  if (s >= 57 && new Date().getHours() < 10) return '아침 드라마 20분 가능! 🎬';
+  if (s >= 30) return '조금만 더 채워보자';
+  if (s >= 10) return '아직 시간 있어!';
+  return '오늘 시작해볼까?';
+};
+
+const calcStreak = () => {
+  const today = new Date();
+  let streak = 0;
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dk = todayKey(d);
+    const data = ls.get(`daily:${dk}`);
+    if (calcScore(data, dk) >= 60) streak++;
+    else if (i === 0) continue;
+    else break;
+  }
+  return streak;
+};
+
+// ============================================================
+// 콩알 룰 변경 경계
+// 이 날짜 이전 데이터는 옛 룰로 받은 콩알 그대로 보존하고
+// 새 룰로 재계산하지 않음. 누적 13개로 고정 (사용자 보정값).
+// ============================================================
+const RULE_CHANGE_DATE = '2026-06-15';
+const PRE_RULE_BEANS = 13;
+
+// 콩알 계산 - 현재 점수 기준으로 실시간 계산
+// (룰 변경 보호는 RULE_CHANGE_DATE로 처리, 그 이전 데이터는 0 반환)
+const calcBestBeans = (data, dateKey) => {
+  // 룰 변경일 이전 데이터는 콩알 0 반환 (PRE_RULE_BEANS에 합쳐짐)
+  if (dateKey && dateKey < RULE_CHANGE_DATE) {
+    return 0;
+  }
+  const sc = calcScore(data, dateKey);
+  return beansForScore(sc, data);
+};
+
+const countBeans = () => {
+  let total = PRE_RULE_BEANS;  // 룰 변경 전 누적
+  ls.keys('daily:').forEach(k => {
+    const d = ls.get(k);
+    if (!d) return;
+    const dk = k.replace('daily:', '');
+    total += calcBestBeans(d, dk);
+  });
+  // 차감 기록(ledger) 합산 - 보상 받을 때 음수로 저장됨
+  total += ledgerTotal();
+  return Math.max(0, total);
+};
+
+// 모든 데이터에서 bestBeans 필드 1회 정리 (영속화 시스템 제거)
+const migrateBestBeans = () => {
+  // 룰 변경 전 데이터의 bestBeans 정리 (이전 작업)
+  try {
+    if (!ls.get('migrated:rule-change-2026-06-15')) {
+      ls.keys('daily:').forEach(k => {
+        const dk = k.replace('daily:', '');
+        if (dk >= RULE_CHANGE_DATE) return;
+        const d = ls.get(k);
+        if (!d) return;
+        if (d.bestBeans != null) {
+          const { bestBeans, ...rest } = d;
+          ls.set(k, rest);
+        }
+      });
+      ls.set('migrated:rule-change-2026-06-15', { done: true });
+    }
+  } catch (e) { console.error('Migration rule-change failed:', e); }
+
+  // bestBeans 필드 전체 정리 (영속화 시스템 제거) - v3로 강제 재실행
+  try {
+    if (!ls.get('migrated:remove-best-beans-v3')) {
+      ls.keys('daily:').forEach(k => {
+        const d = ls.get(k);
+        if (!d || d.bestBeans == null) return;
+        const { bestBeans, ...rest } = d;
+        ls.set(k, rest);
+      });
+      ls.set('migrated:remove-best-beans-v3', { done: true });
+    }
+  } catch (e) { console.error('Migration remove-best-beans-v3 failed:', e); }
+
+  // 콩알 강제 14개 보정 (사용자 명시) - 한 번만
+  try {
+    if (!ls.get('migrated:force-beans-14')) {
+      const current = countBeans();
+      if (current > 14) {
+        saveLedgerEntry({
+          id: newLedgerId(),
+          beans: 14 - current,  // 음수 보정
+          reason: '관리자 보정 (콩알 14개로 정리)',
+          ts: Date.now(),
+        });
+      }
+      ls.set('migrated:force-beans-14', { done: true });
+    }
+  } catch (e) { console.error('Migration force-beans-14 failed:', e); }
+};
+
+const useToast = () => {
+  const [msg, setMsg] = useState(null);
+  const show = (m) => { setMsg(m); setTimeout(() => setMsg(null), 1400); };
+  return [msg, show];
+};
+
+function App() {
+  const [mode, setMode] = useState('kid');
+  const [loading, setLoading] = useState(true);
+  const [toast, showToast] = useToast();
+  const [syncKey, setSyncKey] = useState(0); // 서버 데이터 적용 후 강제 리렌더
+  const [sync, setSync] = useState({ status: 'idle', time: null });
+
+  // 초기 로드: 서버에서 데이터 끌어오기 + 옛 데이터 마이그레이션 (모두 안전하게)
+  useEffect(() => {
+    (async () => {
+      try { await pullFromServer(); } catch (e) { console.error('Pull failed:', e); }
+      try { migrateBestBeans(); } catch (e) { console.error('Migration failed:', e); }
+      setTimeout(() => setLoading(false), 200);
+    })();
+  }, []);
+
+  // 동기화 상태 구독
+  useEffect(() => {
+    const cb = (status, time) => setSync({ status, time });
+    syncStatusCallbacks.add(cb);
+    return () => syncStatusCallbacks.delete(cb);
+  }, []);
+
+  // 폴링: 30초마다 + 포커스/visibility 변경 시
+  useEffect(() => {
+    if (loading) return;
+    const refresh = async () => {
+      const changed = await pullFromServer();
+      if (changed) setSyncKey(k => k + 1);
+    };
+    const onFocus = () => refresh();
+    const onVis = () => { if (!document.hidden) refresh(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVis);
+    const interval = setInterval(refresh, 30000);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVis);
+      clearInterval(interval);
+    };
+  }, [loading]);
+
+  if (loading) {
+    return (
+      <div className="loading">
+        <div className="loading-emoji">🌱</div>
+        <div className="loading-text">키 크기 미션</div>
+        <div style={{fontSize:11,color:'#94806B',marginTop:4}}>☁️ 데이터 불러오는 중…</div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {toast && <div className="toast">{toast}</div>}
+      {mode === 'kid'
+        ? <KidView key={syncKey} setMode={setMode} showToast={showToast} sync={sync} />
+        : <ParentView setMode={setMode} showToast={showToast} sync={sync} />}
+    </>
+  );
+}
+
+function KidView({ setMode, showToast, sync }) {
+  const today = todayKey();
+  const [data, setData] = useState(() => ({ ...emptyDay(), ...(ls.get(`daily:${today}`) || {}) }));
+  const [celebrate, setCelebrate] = useState(null);
+  const [dramaCelebrate, setDramaCelebrate] = useState(null);
+  const [morningDramaCelebrate, setMorningDramaCelebrate] = useState(null);
+  const [showRewards, setShowRewards] = useState(false);
+
+  const score = useMemo(() => calcScore(data, today), [data]);
+  const streak = useMemo(() => calcStreak(), [data]);
+  const sleep = calcSleep(data.bedtime, data.wakeup);
+  const mealCount = MEALS.filter(m => data.meals[m.key]).length;
+  const mainMealCount = ['breakfast','lunch','dinner'].filter(k => data.meals?.[k]).length;
+  const exerciseBonus = !!(data.exercises?.jumprope || data.exercises?.hockeyPrac);
+  const milkCups = data.milk || 0;
+  const milkPts = milkScore(milkCups);
+  const eggCount = data.eggs || 0;
+  const eggPts = eggScore(eggCount);
+  const proteinCount = data.protein || 0;
+  const proteinPts = proteinScore(proteinCount);
+  const todayClasses = getClassesForDay(today);
+
+  // 콩알 (점수에서 derive — 점수 떨어지면 자동으로 같이 떨어짐)
+  const todayBeans = useMemo(() => calcBestBeans(data, today), [data, today]);
+  const [beansCount, setBeansCount] = useState(() => countBeans());
+  useEffect(() => { setBeansCount(countBeans()); }, [data]);
+  const refreshBeans = () => setBeansCount(countBeans());
+
+  // 콩알 획득 축하 (오늘 콩알 개수가 늘어났을 때만)
+  const prevTodayBeansRef = useRef(null);
+  useEffect(() => {
+    if (prevTodayBeansRef.current === null) {
+      prevTodayBeansRef.current = todayBeans;
+      return;
+    }
+    if (todayBeans > prevTodayBeansRef.current) {
+      const gained = todayBeans - prevTodayBeansRef.current;
+      setCelebrate({ gained, todayBeans, total: countBeans() });
+      if (navigator.vibrate) navigator.vibrate([60, 30, 60, 30, 100]);
+    }
+    prevTodayBeansRef.current = todayBeans;
+  }, [todayBeans]);
+
+  // 드라마 시청권 축하 - 85점 이상 + 수학 8쪽 + 저녁 7시 이후엔 샤워 완료 + 콩알 자격 안 됨 (수학 미달)
+  const prevDramaEligibleRef = useRef(false);
+  useEffect(() => {
+    const now = new Date();
+    const isEvening = now.getHours() >= 19;
+    const showerOK = !isEvening || !!data.eveningRoutines?.shower;
+    const math = data?.homework?.math || 0;
+    // 콩알 받는 점수대에선 콩알 모달 우선, 드라마는 그 사이 단계에서만
+    const beans = beansForScore(score, data);
+    const eligible = score >= 85 && math >= HOMEWORK_FOR_DRAMA_MATH && showerOK && beans === 0;
+    if (!prevDramaEligibleRef.current && eligible) {
+      setDramaCelebrate(true);
+      if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
+    }
+    prevDramaEligibleRef.current = eligible;
+  }, [score, data]);
+
+  // 57점 아침 드라마 20분 축하 (점수 57점 처음 넘을 때 + 오전 10시 이전에만)
+  const prevMorning45Ref = useRef(false);
+  useEffect(() => {
+    const beforeTen = new Date().getHours() < 10;
+    const eligible = score >= 57 && beforeTen;
+    if (!prevMorning45Ref.current && eligible) {
+      setMorningDramaCelebrate(true);
+      if (navigator.vibrate) navigator.vibrate([30, 15, 30]);
+    }
+    prevMorning45Ref.current = eligible;
+  }, [score]);
+
+  const save = (newData) => {
+    // bestBeans 필드는 더 이상 사용 안 함 (룰 변경 시 PRE_RULE_BEANS로 처리)
+    // 기존 데이터에 bestBeans 필드가 있다면 제거
+    const { bestBeans, ...cleanData } = newData;
+    setData(cleanData);
+    ls.set(`daily:${today}`, cleanData);
+  };
+
+  const toggleMeal = (key) => {
+    const cur = data.meals?.[key] || 0;
+    let next;
+    if (key === 'breakfast' || key === 'dinner') {
+      // 0(안 먹음) → 1(먹음) → 2(20분내 빠른 식사) → 0
+      next = (cur >= 2) ? 0 : (cur + 1);
+    } else {
+      // 0 ↔ 1 토글
+      next = cur ? 0 : 1;
+    }
+    save({ ...data, meals: { ...data.meals, [key]: next } });
+    if (navigator.vibrate) navigator.vibrate(next === 2 ? [10, 30, 20] : 10);
+  };
+  const toggleRoutine = (key) => {
+    save({ ...data, routines: { ...data.routines, [key]: !data.routines?.[key] } });
+    if (navigator.vibrate) navigator.vibrate(10);
+  };
+  const toggleEveningRoutine = (key) => {
+    save({ ...data, eveningRoutines: { ...data.eveningRoutines, [key]: !data.eveningRoutines?.[key] } });
+    if (navigator.vibrate) navigator.vibrate(10);
+  };
+  const toggleClass = (key) => {
+    save({ ...data, classes: { ...data.classes, [key]: !data.classes?.[key] } });
+    if (navigator.vibrate) navigator.vibrate(10);
+  };
+  const adjustMath = (delta) => {
+    const cur = data.homework?.math || 0;
+    const next = Math.max(0, Math.min(10, cur + delta));
+    save({ ...data, homework: { ...data.homework, math: next } });
+    if (navigator.vibrate) navigator.vibrate(8);
+  };
+  const toggleDrawing = () => {
+    save({ ...data, homework: { ...data.homework, drawing: !data.homework?.drawing } });
+    if (navigator.vibrate) navigator.vibrate(10);
+  };
+  const toggleElementary = () => {
+    save({ ...data, homework: { ...data.homework, elementary: !data.homework?.elementary } });
+    if (navigator.vibrate) navigator.vibrate(10);
+  };
+  const toggleEnglish = () => {
+    save({ ...data, homework: { ...data.homework, english: !data.homework?.english } });
+    if (navigator.vibrate) navigator.vibrate(10);
+  };
+  const adjustMilk = (delta) => {
+    const cur = data.milk || 0;
+    const next = Math.max(0, Math.min(10, cur + delta));
+    save({ ...data, milk: next });
+    if (navigator.vibrate) navigator.vibrate(8);
+  };
+  const adjustEgg = (delta) => {
+    const cur = data.eggs || 0;
+    const next = Math.max(0, Math.min(10, cur + delta));
+    save({ ...data, eggs: next });
+    if (navigator.vibrate) navigator.vibrate(8);
+  };
+  const adjustProtein = (delta) => {
+    const cur = data.protein || 0;
+    const next = Math.max(0, Math.min(5, cur + delta));
+    save({ ...data, protein: next });
+    if (navigator.vibrate) navigator.vibrate(8);
+  };
+
+  // 부모 화면 비밀번호 모달
+  const [showPwModal, setShowPwModal] = useState(false);
+  const [pwInput, setPwInput] = useState('');
+  const [pwError, setPwError] = useState(false);
+  const pwInputRef = useRef(null);
+
+  const openPwModal = () => {
+    setPwInput('');
+    setPwError(false);
+    setShowPwModal(true);
+    setTimeout(() => pwInputRef.current?.focus(), 100);
+  };
+  const closePwModal = () => {
+    setShowPwModal(false);
+    setPwInput('');
+    setPwError(false);
+  };
+  const checkPassword = (value) => {
+    if (value === PARENT_PASSWORD) {
+      if (navigator.vibrate) navigator.vibrate(30);
+      setShowPwModal(false);
+      setPwInput('');
+      setMode('parent');
+    } else {
+      setPwError(true);
+      if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
+      setTimeout(() => {
+        setPwInput('');
+        setPwError(false);
+      }, 600);
+    }
+  };
+  const onPwChange = (e) => {
+    const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+    setPwInput(v);
+    setPwError(false);
+    if (v.length === 4) checkPassword(v);
+  };
+
+  const routineDone = ROUTINES.filter(r => data.routines?.[r.key]).length;
+  const eveningDone = EVENING_ROUTINES.filter(r => data.eveningRoutines?.[r.key]).length;
+  const classDone = todayClasses.filter(c => data.classes?.[c]).length;
+  const mathPages = data.homework?.math || 0;
+  const drawingDone = !!data.homework?.drawing;
+  const elementaryDone = !!data.homework?.elementary;
+  const englishDone = !!data.homework?.english;
+  const isTuesday = new Date(today + 'T00:00:00').getDay() === 2;
+  const hwScore = (mathPages === 10 && drawingDone);
+
+  return (
+    <div className="app">
+      {/* 콩알 획득 축하 모달 */}
+      {celebrate && (
+        <div className="bean-overlay" onClick={() => setCelebrate(null)}>
+          <div className="bean-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="bean-big">
+              {celebrate.todayBeans === 4 ? '🫘🫘🫘🫘' :
+               celebrate.todayBeans === 2 ? '🫘🫘' : '🫘'}
+            </div>
+            <div className="bean-title">
+              {celebrate.todayBeans === 4 ? '콩알 4개 획득! 🎉' :
+               celebrate.todayBeans === 2 ? '콩알 2개 획득!' :
+               '콩알 1개 획득!'}
+            </div>
+            <div className="bean-msg">
+              {celebrate.todayBeans === 4
+                ? '완벽한 하루! 수학 10쪽도 끝냈어! 🎉'
+                : celebrate.todayBeans === 2
+                  ? '대단해! 수학 8쪽까지! 🌟'
+                  : '85점 넘었어! 잘했어 👏'}
+            </div>
+            <div className="bean-count-big">{celebrate.total}개</div>
+            <div style={{fontSize:12,color:'#94806B',marginTop:4}}>총 모은 콩알</div>
+            <button className="bean-close" onClick={() => setCelebrate(null)}>좋아!</button>
+          </div>
+        </div>
+      )}
+
+      {/* 85점 드라마 시청권 축하 모달 */}
+      {dramaCelebrate && (
+        <div className="bean-overlay" onClick={() => setDramaCelebrate(null)}>
+          <div className="bean-modal drama-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="bean-big">🎬</div>
+            <div className="bean-title" style={{color:'#7E3FAB'}}>드라마 시청권 획득!</div>
+            <div className="bean-msg">드라마 봐도 돼! 🎉</div>
+            <button className="bean-close" style={{background:'#9B5DCB'}}
+                    onClick={() => setDramaCelebrate(null)}>좋아!</button>
+          </div>
+        </div>
+      )}
+
+      {/* 57점 아침 드라마 20분 축하 모달 */}
+      {morningDramaCelebrate && (
+        <div className="bean-overlay" onClick={() => setMorningDramaCelebrate(null)}>
+          <div className="bean-modal drama-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="bean-big">🎬⏱️</div>
+            <div className="bean-title" style={{color:'#7E3FAB'}}>아침 드라마 20분!</div>
+            <div className="bean-msg">57점 도달! 🎉<br/>20분만! 잘 다녀와 👋</div>
+            <button className="bean-close" style={{background:'#9B5DCB'}}
+                    onClick={() => setMorningDramaCelebrate(null)}>고마워!</button>
+          </div>
+        </div>
+      )}
+
+      {/* 콩알 보상 모달 */}
+      {showRewards && (
+        <RewardsModal beansCount={beansCount}
+                      onClose={() => { setShowRewards(false); refreshBeans(); }}
+                      onBeansChange={setBeansCount}
+                      readonly={true} />
+      )}
+
+      {/* 부모 화면 비밀번호 모달 */}
+      {showPwModal && (
+        <div className="bean-overlay" onClick={closePwModal}>
+          <div className="bean-modal pw-modal" onClick={(e) => { e.stopPropagation(); pwInputRef.current?.focus(); }}>
+            <div className="pw-emoji">🔒</div>
+            <div className="pw-title">부모 화면</div>
+            <div className="pw-subtitle">비밀번호 4자리를 입력하세요</div>
+            <div className={`pw-dots ${pwError ? 'error' : ''}`} onClick={() => pwInputRef.current?.focus()}>
+              {[0,1,2,3].map(i => (
+                <div key={i} className={`pw-dot ${pwInput.length > i ? 'filled' : ''}`}></div>
+              ))}
+            </div>
+            <input
+              ref={pwInputRef}
+              className="pw-input"
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={4}
+              value={pwInput}
+              onChange={onPwChange}
+              autoFocus
+            />
+            {pwError && <div className="pw-error-msg">틀렸어요</div>}
+            <button className="bean-close" style={{background:'#94806B'}}
+                    onClick={closePwModal}>닫기</button>
+          </div>
+        </div>
+      )}
+
+      <div className="kid-header">
+        <div>
+          <div className="kid-greeting">안녕, 주완! 🌱</div>
+          <div className="kid-date">{formatKDate(today)}</div>
+        </div>
+        <div className="header-badges">
+          <SyncBadge sync={sync} />
+          <button className="beans-badge" onClick={() => setShowRewards(true)}>
+            <span className="b-emoji">🫘</span><span>{beansCount}</span>
+          </button>
+          {streak > 0 && (
+            <div className="streak">
+              <span>🔥</span><span>{streak}일</span>
+            </div>
+          )}
+          <button className="secret-btn" onClick={openPwModal}>⋯</button>
+        </div>
+      </div>
+
+      <div className="score-card">
+        <div className="character">{character(score)}</div>
+        <div>
+          <span className="score-num">{score}</span>
+          <span className="score-unit">점</span>
+        </div>
+        <div className="score-msg">{message(score, data)}</div>
+        <div className="score-bar">
+          <div className="score-bar-fill" style={{width:`${Math.min(100, (score/110)*100)}%`}}></div>
+          <div className="score-bar-mark" style={{left:'52%',background:'#9B5DCB'}}></div>
+          <div className="score-mark-lbl" style={{left:'52%',color:'#9B5DCB'}}>🎬</div>
+          <div className="score-bar-mark" style={{left:'77%'}}></div>
+          <div className="score-mark-lbl" style={{left:'77%'}}>🫘</div>
+          <div className="score-bar-mark" style={{left:'86%'}}></div>
+          <div className="score-mark-lbl" style={{left:'86%'}}>🫘🫘</div>
+          <div className="score-bar-mark" style={{left:'91%'}}></div>
+          <div className="score-mark-lbl" style={{left:'91%'}}>🫘×4</div>
+        </div>
+      </div>
+
+      <div style={{height:12}}></div>
+
+      {/* 아침 루틴 */}
+      <div className={`mission ${routineDone === ROUTINES.length ? 'done' : ''}`}>
+        <div className="mission-head">
+          <span className="mission-emoji">🌅</span>
+          <span className="mission-title">아침 루틴</span>
+          <span className="mission-meta">{routineDone}/{ROUTINES.length}</span>
+          <span className="mission-star">⭐</span>
+        </div>
+        <div className="routine-row">
+          {ROUTINES.map(r => (
+            <button key={r.key}
+                    className={`routine-btn ${data.routines?.[r.key] ? 'checked' : ''}`}
+                    onClick={() => toggleRoutine(r.key)}>
+              <span className="routine-emoji">{r.emoji}</span>
+              <span className="routine-lbl">{r.label}</span>
+              <span className="routine-pts">+{r.points}점</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 학원 */}
+      <div className={`mission ${todayClasses.length === 0 || classDone === todayClasses.length ? 'done' : ''}`}>
+        <div className="mission-head">
+          <span className="mission-emoji">🎒</span>
+          <span className="mission-title">오늘의 학원</span>
+          {todayClasses.length > 0 && (
+            <span className="mission-meta">{classDone}/{todayClasses.length}</span>
+          )}
+          <span className="mission-star">⭐</span>
+        </div>
+        {todayClasses.length === 0 ? (
+          <div className="no-class">
+            <div className="no-class-emoji">🎉</div>
+            <div className="no-class-msg">학원 없는 날!</div>
+            <div className="no-class-sub">충분히 쉬자</div>
+          </div>
+        ) : (
+          <div className="class-row">
+            {todayClasses.map(c => {
+              const info = CLASS_INFO[c];
+              const checked = !!data.classes?.[c];
+              return (
+                <button key={c}
+                        className={`class-btn ${checked ? 'checked' : ''}`}
+                        onClick={() => toggleClass(c)}>
+                  <span className="class-emoji">{info.emoji}</span>
+                  <span className="class-lbl">{info.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 운동 */}
+      <div className={`mission ${exerciseBonus ? 'done' : ''}`}>
+        <div className="mission-head">
+          <span className="mission-emoji">💪</span>
+          <span className="mission-title">오늘 한 운동</span>
+          <span className="mission-meta">🎯 줄넘기 +3 · 하키연습 +3</span>
+          <span className="mission-star">⭐</span>
+        </div>
+        <div className="ex-row">
+          {EXERCISES.map(e => {
+            const autoChecked = !!(CLASS_TO_EXERCISE[e.key] === undefined ? false : data.classes?.[e.key]);
+            const userChecked = !!data.exercises?.[e.key];
+            const checked = autoChecked || userChecked;
+            const isBonus = e.key === 'jumprope' || e.key === 'hockeyPrac';
+            return (
+              <button key={e.key}
+                      className={`ex-btn ${checked ? 'active' : ''} ${autoChecked ? 'auto' : ''} ${isBonus ? 'bonus' : ''}`}
+                      onClick={() => {
+                        if (autoChecked) return; // 학원 자동 체크는 변경 불가
+                        save({
+                          ...data,
+                          exercises: { ...data.exercises, [e.key]: !data.exercises?.[e.key] }
+                        });
+                        if (navigator.vibrate) navigator.vibrate(10);
+                      }}>
+                <span className="ex-emoji">{e.emoji}</span>
+                <span className="ex-lbl">{e.label}</span>
+                {autoChecked && <span className="ex-auto-tag">학원</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 숙제 */}
+      <div className={`mission ${hwScore ? 'done' : ''}`}>
+        <div className="mission-head">
+          <span className="mission-emoji">📚</span>
+          <span className="mission-title">숙제</span>
+          <span className="mission-star">⭐</span>
+        </div>
+        <div className={`hw-block ${mathPages === 10 ? 'done' : ''}`}>
+          <div className="hw-block-head">
+            <span className="hw-block-emoji">📐</span>
+            <span className="hw-block-title">수학 (1쪽 +2점)</span>
+            <span className="hw-block-meta">{mathPages} / 10 · +{mathPages * 2}점</span>
+          </div>
+          <div className="hw-row">
+            <button className="hw-btn" onClick={() => adjustMath(-1)} disabled={mathPages === 0}>−</button>
+            <input
+              type="range"
+              min="0"
+              max="10"
+              step="1"
+              value={mathPages}
+              className="hw-slider"
+              style={{
+                background: `linear-gradient(to right, #FFB85C 0%, #FF8A4C ${(mathPages/10)*100}%, #FFF0D8 ${(mathPages/10)*100}%, #FFF0D8 100%)`
+              }}
+              onChange={(e) => save({...data, homework: {...data.homework, math: parseInt(e.target.value)}})}
+            />
+            <button className="hw-btn" onClick={() => adjustMath(1)} disabled={mathPages === 10}>＋</button>
+          </div>
+        </div>
+        <div className={`hw-block ${drawingDone ? 'done' : ''}`}>
+          <div className="hw-block-head">
+            <span className="hw-block-emoji">🎨</span>
+            <span className="hw-block-title">그림</span>
+            <span className="hw-block-meta">+3점</span>
+          </div>
+          <button className={`hw-draw-btn ${drawingDone ? 'checked' : ''}`} onClick={toggleDrawing}>
+            <div className="hw-draw-check">✓</div>
+            <div className="hw-draw-lbl">{drawingDone ? '완료!' : '오늘 끝내기'}</div>
+          </button>
+        </div>
+
+        <div className={`hw-block ${elementaryDone ? 'done' : ''}`}>
+          <div className="hw-block-head">
+            <span className="hw-block-emoji">📱</span>
+            <span className="hw-block-title">엘리하이</span>
+            <span className="hw-block-meta">+3점</span>
+          </div>
+          <button className={`hw-draw-btn ${elementaryDone ? 'checked' : ''}`} onClick={toggleElementary}>
+            <div className="hw-draw-check">✓</div>
+            <div className="hw-draw-lbl">{elementaryDone ? '완료!' : '오늘 끝내기'}</div>
+          </button>
+        </div>
+
+        {isTuesday && (
+          <div className={`hw-block ${englishDone ? 'done' : ''}`}>
+            <div className="hw-block-head">
+              <span className="hw-block-emoji">🔤</span>
+              <span className="hw-block-title">영어 숙제 (화요일)</span>
+              <span className="hw-block-meta">+2점</span>
+            </div>
+            <button className={`hw-draw-btn ${englishDone ? 'checked' : ''}`} onClick={toggleEnglish}>
+              <div className="hw-draw-check">✓</div>
+              <div className="hw-draw-lbl">{englishDone ? '완료!' : '오늘 끝내기'}</div>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* 식사 */}
+      <div className={`mission ${mainMealCount === 3 ? 'done' : ''}`}>
+        <div className="mission-head">
+          <span className="mission-emoji">🍽️</span>
+          <span className="mission-title">든든하게 먹기</span>
+          <span className="mission-meta">{mainMealCount}/3끼</span>
+          <span className="mission-star">⭐</span>
+        </div>
+        <div className="mission-sub">아침·저녁 2번 누르면 ⚡ 20분 내 식사 +1점</div>
+        <div className="meal-row">
+          {MEALS.map(m => {
+            const v = data.meals?.[m.key];
+            const isFast = (m.key === 'breakfast' || m.key === 'dinner') && v === 2;
+            return (
+              <button key={m.key}
+                      className={`meal-btn ${v ? 'checked' : ''} ${isFast ? 'fast' : ''}`}
+                      onClick={() => toggleMeal(m.key)}>
+                {isFast && <span className="meal-fast">⚡</span>}
+                <span className="meal-emoji">{m.emoji}</span>
+                <span className="meal-lbl">{m.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 우유 (보너스) */}
+      <div className={`mission ${milkCups >= 3 ? 'done' : ''}`}>
+        <div className="mission-head">
+          <span className="mission-emoji">🥛</span>
+          <span className="mission-title">우유 (보너스)</span>
+          <span className="mission-meta">
+            {milkCups}잔 {milkPts > 0 && <span style={{color:'#3D7C3D'}}>(+{milkPts}점)</span>}
+          </span>
+          <span className="mission-star">⭐</span>
+        </div>
+        <div className="mission-sub">1잔당 +1점, 3잔 채우면 보너스 +2점!</div>
+        <div className="milk-row">
+          <button className="hw-btn" onClick={() => adjustMilk(-1)} disabled={milkCups === 0}>−</button>
+          <div className="milk-cups">
+            {[1,2,3,4,5].map(n => (
+              <span key={n} className={`milk-cup ${milkCups >= n ? 'on' : ''} ${n === 3 && milkCups >= 3 ? 'bonus' : ''}`}>
+                🥛
+              </span>
+            ))}
+            {milkCups > 5 && <span className="milk-extra">+{milkCups - 5}</span>}
+          </div>
+          <button className="hw-btn" onClick={() => adjustMilk(1)} disabled={milkCups === 10}>＋</button>
+        </div>
+      </div>
+
+      {/* 삶은 계란 (보너스) */}
+      <div className={`mission ${eggCount >= 3 ? 'done' : ''}`}>
+        <div className="mission-head">
+          <span className="mission-emoji">🥚</span>
+          <span className="mission-title">삶은 계란 (보너스)</span>
+          <span className="mission-meta">
+            {eggCount}알 {eggPts > 0 && <span style={{color:'#3D7C3D'}}>(+{eggPts}점)</span>}
+          </span>
+          <span className="mission-star">⭐</span>
+        </div>
+        <div className="mission-sub">1알당 +1점, 3알 채우면 보너스 +2점!</div>
+        <div className="milk-row">
+          <button className="hw-btn" onClick={() => adjustEgg(-1)} disabled={eggCount === 0}>−</button>
+          <div className="milk-cups">
+            {[1,2,3,4,5].map(n => (
+              <span key={n} className={`milk-cup ${eggCount >= n ? 'on' : ''} ${n === 3 && eggCount >= 3 ? 'bonus' : ''}`}>
+                🥚
+              </span>
+            ))}
+            {eggCount > 5 && <span className="milk-extra">+{eggCount - 5}</span>}
+          </div>
+          <button className="hw-btn" onClick={() => adjustEgg(1)} disabled={eggCount === 10}>＋</button>
+        </div>
+      </div>
+
+      {/* 더단백 음료 (보너스) */}
+      <div className={`mission ${proteinCount >= 1 ? 'done' : ''}`}>
+        <div className="mission-head">
+          <span className="mission-emoji">💪</span>
+          <span className="mission-title">더단백 음료 (보너스)</span>
+          <span className="mission-meta">
+            {proteinCount}개 {proteinPts > 0 && <span style={{color:'#3D7C3D'}}>(+{proteinPts}점)</span>}
+          </span>
+        </div>
+        <div className="mission-sub">1개당 +2점!</div>
+        <div className="milk-row">
+          <button className="hw-btn" onClick={() => adjustProtein(-1)} disabled={proteinCount === 0}>−</button>
+          <div className="milk-cups">
+            {[1,2,3,4,5].map(n => (
+              <span key={n} className={`milk-cup ${proteinCount >= n ? 'on' : ''}`}>
+                🥤
+              </span>
+            ))}
+          </div>
+          <button className="hw-btn" onClick={() => adjustProtein(1)} disabled={proteinCount === 5}>＋</button>
+        </div>
+      </div>
+
+      {/* 저녁 루틴: 샤워 + 로션 */}
+      <div className={`mission ${eveningDone === EVENING_ROUTINES.length ? 'done' : ''}`}>
+        <div className="mission-head">
+          <span className="mission-emoji">🌙</span>
+          <span className="mission-title">자기 전 루틴</span>
+          <span className="mission-meta">{eveningDone}/{EVENING_ROUTINES.length}</span>
+          <span className="mission-star">⭐</span>
+        </div>
+        <div className="routine-row routine-row-3">
+          {EVENING_ROUTINES.map(r => (
+            <button key={r.key}
+                    className={`routine-btn ${data.eveningRoutines?.[r.key] ? 'done' : ''}`}
+                    onClick={() => toggleEveningRoutine(r.key)}>
+              <span className="routine-emoji">{r.emoji}</span>
+              <span className="routine-lbl">{r.label}</span>
+              <span className="routine-pts">+{r.points}점</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 컨디션 */}
+      <div className={`mission ${data.condition ? 'done' : ''}`}>
+        <div className="mission-head">
+          <span className="mission-emoji">😊</span>
+          <span className="mission-title">오늘 기분 어때?</span>
+          <span className="mission-star">⭐</span>
+        </div>
+        <div className="cond-row">
+          {COND.map((emoji, i) => (
+            <button key={i}
+                    className={`cond-btn ${data.condition === i + 1 ? 'active' : ''}`}
+                    onClick={() => save({...data, condition: data.condition === i + 1 ? 0 : i + 1})}>
+              {emoji}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 수면 */}
+      <div className={`mission ${sleep != null && sleep >= 9 ? 'done' : ''}`}>
+        <div className="mission-head">
+          <span className="mission-emoji">😴</span>
+          <span className="mission-title">푹 자기</span>
+          <span className="mission-star">⭐</span>
+        </div>
+        <div className="mission-sub">9시간 이상 자면 키가 쑥쑥!</div>
+        <div className="sleep-row">
+          <div className="time-box">
+            <label>잘 시간</label>
+            <input type="time" value={data.bedtime}
+                   onChange={(e) => save({...data, bedtime: e.target.value})} />
+          </div>
+          <div className="time-box">
+            <label>일어난 시간</label>
+            <input type="time" value={data.wakeup}
+                   onChange={(e) => save({...data, wakeup: e.target.value})} />
+          </div>
+          <div className="time-result">
+            <div className="time-result-num">{sleep != null ? sleep.toFixed(1) : '—'}</div>
+            <div className="time-result-lbl">시간</div>
+          </div>
+        </div>
+      </div>
+
+      <MonthCalendar today={today} />
+
+      <div className="footer-hint">⋯ 버튼을 누르면 부모 화면</div>
+    </div>
+  );
+}
+
+function ParentView({ setMode, showToast, sync }) {
+  const [tab, setTab] = useState('week');
+  const [showRewards, setShowRewards] = useState(false);
+  const [beans, setBeans] = useState(() => countBeans());
+  const refreshBeans = () => setBeans(countBeans());
+  return (
+    <div className="parent-app">
+      <div className="parent-header">
+        <button className="parent-back" onClick={() => setMode('kid')}>‹</button>
+        <h1 className="parent-title">부모 화면</h1>
+        <SyncBadge sync={sync} />
+        <button className="parent-bean-count" onClick={() => setShowRewards(true)} style={{cursor:'pointer'}}>
+          <span>🫘</span><span>{beans}</span>
+        </button>
+      </div>
+      <div className="parent-tabs">
+        <button className={`parent-tab ${tab === 'week' ? 'active' : ''}`} onClick={() => setTab('week')}>주간</button>
+        <button className={`parent-tab ${tab === 'monthly' ? 'active' : ''}`} onClick={() => setTab('monthly')}>월간</button>
+        <button className={`parent-tab ${tab === 'backup' ? 'active' : ''}`} onClick={() => setTab('backup')}>백업</button>
+      </div>
+      <div className="parent-content">
+        {tab === 'week'    && <WeekTab />}
+        {tab === 'monthly' && <MonthlyTab showToast={showToast} />}
+        {tab === 'backup'  && <BackupTab showToast={showToast} />}
+      </div>
+      {showRewards && (
+        <RewardsModal beansCount={beans}
+                      onClose={() => { setShowRewards(false); refreshBeans(); }}
+                      onBeansChange={setBeans}
+                      readonly={false} />
+      )}
+    </div>
+  );
+}
+
+function WeekTab() {
+  const days = useMemo(() => {
+    const today = new Date();
+    const out = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = todayKey(d);
+      const data = ls.get(`daily:${key}`);
+      out.push({ key, label: dayName(key), data });
+    }
+    return out;
+  }, []);
+
+  const stats = useMemo(() => {
+    const valid = days.filter(d => d.data);
+    const sleeps = valid.map(d => calcSleep(d.data.bedtime, d.data.wakeup)).filter(Boolean);
+    const mealCounts = valid.map(d => MEALS.filter(m => d.data.meals?.[m.key]).length);
+    const kcals = valid.map(d => MEALS.reduce((s, m) => s + (d.data.meals?.[m.key] ? m.kcal : 0), 0));
+    const exDays = valid.filter(d => {
+      const ex = d.data.exercises || {};
+      return Object.values(ex).some(v => v);
+    }).length;
+    const scores = valid.map(d => calcScore(d.data, d.key));
+    const weekBeans = valid.reduce((s, d) => s + calcBestBeans(d.data, d.key), 0);
+    const twoBeanDays = valid.filter(d => calcBestBeans(d.data, d.key) >= 2).length;
+    const fourBeanDays = valid.filter(d => calcBestBeans(d.data, d.key) === 4).length;
+    const avg = (a) => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+    return {
+      avgSleep: avg(sleeps),
+      avgMeal: avg(mealCounts),
+      avgKcal: avg(kcals),
+      avgScore: avg(scores),
+      exDays,
+      validDays: valid.length,
+      weekBeans,
+      twoBeanDays,
+      fourBeanDays,
+    };
+  }, [days]);
+
+  const scoreData = days.map(d => {
+    const sc = d.data ? calcScore(d.data, d.key) : 0;
+    return {
+      day: d.label,
+      점수: sc,
+      콩알: d.data ? calcBestBeans(d.data, d.key) : 0,
+    };
+  });
+  const sleepData = days.map(d => ({ day: d.label, 수면: d.data ? calcSleep(d.data.bedtime, d.data.wakeup) : null }));
+  const kcalData = days.map(d => ({ day: d.label, 칼로리: d.data ? MEALS.reduce((s, m) => s + (d.data.meals?.[m.key] ? m.kcal : 0), 0) : 0 }));
+
+  return (
+    <div>
+      <div style={{padding:'8px 4px 12px',fontSize:13,color:'#8B8478'}}>
+        {stats.validDays}일 기록 · 이번주 콩알 {stats.weekBeans}개 · 콩알 4개 {stats.fourBeanDays}일 · 운동 {stats.exDays}일
+      </div>
+
+      <div className="stat-grid">
+        <StatCard label="평균 점수" value={stats.avgScore != null ? Math.round(stats.avgScore) : '—'} unit="/110" target="95+" good={stats.avgScore >= 95}/>
+        <StatCard label="이번주 콩알" value={stats.weekBeans} unit="개" target="7+" good={stats.weekBeans >= 7}/>
+        <StatCard label="평균 수면" value={stats.avgSleep != null ? stats.avgSleep.toFixed(1) : '—'} unit="h" target="9.0+" good={stats.avgSleep >= 9}/>
+        <StatCard label="평균 칼로리" value={stats.avgKcal != null ? Math.round(stats.avgKcal).toLocaleString() : '—'} unit="kcal" target="3,000+" good={stats.avgKcal >= 3000}/>
+      </div>
+
+      <div className="card">
+        <div className="card-head"><span className="card-title">일일 점수 (🫘 = 콩알)</span></div>
+        <div className="chart-wrap">
+          <R.ResponsiveContainer>
+            <R.BarChart data={scoreData} margin={{top:10,right:10,bottom:0,left:-20}}>
+              <R.CartesianGrid strokeDasharray="2 4" stroke="#E8E3D6" vertical={false}/>
+              <R.XAxis dataKey="day" tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false}/>
+              <R.YAxis domain={[0,100]} tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false}/>
+              <R.ReferenceLine y={85} stroke="#FFD580" strokeDasharray="3 3"/>
+              <R.ReferenceLine y={95} stroke="#F4C13D" strokeDasharray="3 3"/>
+              <R.ReferenceLine y={100} stroke="#E89A0F" strokeDasharray="3 3"/>
+              <R.Tooltip
+                contentStyle={{borderRadius:8,fontSize:12,border:'1px solid #E8E3D6'}}
+                formatter={(v, name, props) => {
+                  if (name === '점수') {
+                    const beans = props.payload.콩알;
+                    const beanStr = beans === 2 ? ' 🫘🫘' : beans === 1 ? ' 🫘' : '';
+                    return [v + beanStr, '점수'];
+                  }
+                  return [v, name];
+                }}/>
+              <R.Bar dataKey="점수" radius={[6,6,0,0]}>
+                {scoreData.map((d, i) => (
+                  <R.Cell key={i} fill={d.콩알 === 2 ? '#E89A0F' : d.콩알 === 1 ? '#F4C13D' : '#FFD89C'}/>
+                ))}
+              </R.Bar>
+            </R.BarChart>
+          </R.ResponsiveContainer>
+        </div>
+        <div className="chart-legend">
+          <span className="legend-dot" style={{background:'#E89A0F'}}></span><span style={{marginRight:10}}>🫘×4 100점+</span>
+          <span className="legend-dot" style={{background:'#F4C13D'}}></span><span style={{marginRight:10}}>🫘🫘 95점+</span>
+          <span className="legend-dot" style={{background:'#FFD580'}}></span><span style={{marginRight:10}}>🫘 85점+</span>
+          <span className="legend-dot" style={{background:'#FFD89C'}}></span><span>미달</span>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-head"><span className="card-title">수면 시간</span></div>
+        <div className="chart-wrap">
+          <R.ResponsiveContainer>
+            <R.AreaChart data={sleepData} margin={{top:10,right:10,bottom:0,left:-20}}>
+              <defs>
+                <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#2D5F4F" stopOpacity={0.35}/>
+                  <stop offset="100%" stopColor="#2D5F4F" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <R.CartesianGrid strokeDasharray="2 4" stroke="#E8E3D6" vertical={false}/>
+              <R.XAxis dataKey="day" tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false}/>
+              <R.YAxis domain={[6,11]} tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false}/>
+              <R.ReferenceLine y={9} stroke="#C4654D" strokeDasharray="3 3"/>
+              <R.Tooltip contentStyle={{borderRadius:8,fontSize:12,border:'1px solid #E8E3D6'}} formatter={(v) => v != null ? `${v.toFixed(1)} h` : '—'}/>
+              <R.Area type="monotone" dataKey="수면" stroke="#2D5F4F" strokeWidth={2.5} fill="url(#g1)" connectNulls/>
+            </R.AreaChart>
+          </R.ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-head"><span className="card-title">일일 칼로리</span></div>
+        <div className="chart-wrap">
+          <R.ResponsiveContainer>
+            <R.BarChart data={kcalData} margin={{top:10,right:10,bottom:0,left:-10}}>
+              <R.CartesianGrid strokeDasharray="2 4" stroke="#E8E3D6" vertical={false}/>
+              <R.XAxis dataKey="day" tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false}/>
+              <R.YAxis tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false}/>
+              <R.ReferenceLine y={3000} stroke="#C4654D" strokeDasharray="3 3"/>
+              <R.Tooltip contentStyle={{borderRadius:8,fontSize:12,border:'1px solid #E8E3D6'}} formatter={(v) => `${v.toLocaleString()} kcal`}/>
+              <R.Bar dataKey="칼로리" fill="#2D5F4F" radius={[6,6,0,0]}/>
+            </R.BarChart>
+          </R.ResponsiveContainer>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SyncBadge({ sync }) {
+  return (
+    <div className="sync-badge" style={{background:'#FAF7EF',color:'#94806B',borderColor:'#E8E3D6'}}>
+      <span>💾</span><span>로컬</span>
+    </div>
+  );
+}
+
+// ============================================================
+// 콩알 보상 모달 (위시리스트 포함)
+// readonly=true: 아동 모드 (이름만 추가, 가격 입력 불가)
+// readonly=false: 부모 모드 (가격 설정, 삭제 가능)
+// ============================================================
+// ============================================================
+// 부모 전용: 콩알 수동 조정 (보정용)
+// ============================================================
+function BeanAdjuster({ currentBeans, onAdjusted }) {
+  const [target, setTarget] = useState('');
+  const [reason, setReason] = useState('');
+
+  const applyAdjustment = () => {
+    const n = parseInt(target, 10);
+    if (isNaN(n) || n < 0) return;
+    const diff = n - currentBeans;
+    if (diff === 0) return;
+    saveLedgerEntry({
+      id: newLedgerId(),
+      beans: diff,
+      reason: reason.trim() || `관리자 보정 (${n}개로 조정)`,
+      ts: Date.now(),
+    });
+    setTarget('');
+    setReason('');
+    if (onAdjusted) onAdjusted();
+  };
+
+  return (
+    <div className="bean-adjuster">
+      <div className="bean-adjuster-title">🔧 콩알 수동 조정</div>
+      <div className="bean-adjuster-row">
+        <input type="tel" inputMode="numeric" pattern="[0-9]*"
+               value={target}
+               onChange={(e) => setTarget(e.target.value.replace(/[^0-9]/g,''))}
+               placeholder={`목표 (현재 ${currentBeans})`}
+               className="form-input" style={{flex:1,fontSize:14,padding:'8px 12px'}}/>
+        <button onClick={applyAdjustment}
+                disabled={!target || parseInt(target,10) === currentBeans}
+                style={{background:'#6B8FE5',color:'#fff',padding:'8px 14px',borderRadius:10,fontSize:13,fontWeight:700}}>
+          조정
+        </button>
+      </div>
+      <input type="text" value={reason}
+             onChange={(e) => setReason(e.target.value)}
+             placeholder="이유 (선택)"
+             className="form-input" style={{width:'100%',marginTop:6,fontSize:12,padding:'6px 12px'}}/>
+    </div>
+  );
+}
+
+function RewardsModal({ beansCount, onClose, readonly = true, onBeansChange }) {
+  const [wishes, setWishes] = useState(() => getAllWishes());
+  const [ledger, setLedger] = useState(() => getAllLedger());
+  const [newName, setNewName] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editPrice, setEditPrice] = useState('');
+  const [claimConfirm, setClaimConfirm] = useState(null); // 받기 확인 모달용
+  const [currentBeans, setCurrentBeans] = useState(beansCount);
+
+  const refreshWishes = () => setWishes(getAllWishes());
+  const refreshLedger = () => {
+    setLedger(getAllLedger());
+    const fresh = countBeans();
+    setCurrentBeans(fresh);
+    if (onBeansChange) onBeansChange(fresh);
+  };
+
+  const addWish = () => {
+    const name = newName.trim();
+    if (!name) return;
+    saveWish({
+      id: newWishId(),
+      name,
+      beans: null, // 가격 미설정
+      createdAt: Date.now(),
+    });
+    setNewName('');
+    refreshWishes();
+  };
+
+  const startEditPrice = (w) => {
+    setEditingId(w.id);
+    setEditPrice(w.beans == null ? '' : String(w.beans));
+  };
+  const savePrice = (w) => {
+    const n = parseInt(editPrice, 10);
+    if (!isNaN(n) && n > 0) {
+      saveWish({ ...w, beans: n });
+    } else if (editPrice === '') {
+      saveWish({ ...w, beans: null });
+    }
+    setEditingId(null);
+    setEditPrice('');
+    refreshWishes();
+  };
+  const deleteWish = (id) => {
+    if (!confirm('이 위시 삭제할까요?')) return;
+    removeWish(id);
+    refreshWishes();
+  };
+
+  // 콩알로 보상 받기 (차감)
+  const onClaim = (item) => {
+    setClaimConfirm(item);
+  };
+  const confirmClaim = () => {
+    if (!claimConfirm) return;
+    const item = claimConfirm;
+    saveLedgerEntry({
+      id: newLedgerId(),
+      beans: -item.beans,
+      reason: item.name,
+      rewardId: item.id,
+      ts: Date.now(),
+    });
+    setClaimConfirm(null);
+    refreshLedger();
+    if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
+  };
+  const undoClaim = (entryId) => {
+    if (!confirm('이 기록 삭제하면 콩알이 되돌아옵니다. 계속할까요?')) return;
+    removeLedgerEntry(entryId);
+    refreshLedger();
+  };
+
+  // 기본 보상 + 위시리스트 합쳐서 표시 (기본 보상은 항상 위에)
+  const builtIn = REWARDS.map(r => ({ id: 'built-in:' + r.beans, name: r.name, beans: r.beans, emoji: r.emoji, isBuiltIn: true }));
+  const userWishes = wishes.map(w => ({ ...w, emoji: '🎁', isBuiltIn: false }));
+  const allItems = [...builtIn, ...userWishes];
+
+  return (
+    <div className="bean-overlay" onClick={onClose}>
+      <div className="bean-modal rewards-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="bean-big">🫘</div>
+        <div className="bean-title">콩알 보상</div>
+        <div className="bean-count-big" style={{marginTop:6}}>{currentBeans}개</div>
+        <div style={{fontSize:12,color:'#94806B',marginTop:2,marginBottom:14}}>지금까지 모은 콩알</div>
+
+        <div className="rewards-list">
+          {allItems.map((item) => {
+            const hasPrice = item.beans != null && item.beans > 0;
+            const unlocked = hasPrice && currentBeans >= item.beans;
+            const left = hasPrice ? Math.max(0, item.beans - currentBeans) : 0;
+            const pct = hasPrice ? Math.min(100, (currentBeans / item.beans) * 100) : 0;
+            const isEditing = editingId === item.id;
+
+            return (
+              <div key={item.id} className={`reward-item ${unlocked ? 'on' : ''} ${!hasPrice ? 'no-price' : ''}`}>
+                <div className="reward-icon">{unlocked ? item.emoji : (hasPrice ? '🔒' : item.emoji)}</div>
+                <div className="reward-body">
+                  <div className="reward-name">{item.name}</div>
+
+                  {hasPrice && !isEditing && (
+                    <>
+                      <div className="reward-need">
+                        🫘 {item.beans}개 {unlocked ? <span style={{color:'#3D7C3D',fontWeight:700}}>· 받을 수 있어!</span> : <span>· {left}개 더!</span>}
+                      </div>
+                      <div className="reward-bar">
+                        <div className="reward-bar-fill" style={{width:`${pct}%`}}></div>
+                      </div>
+                      {unlocked && (
+                        <button onClick={() => onClaim(item)}
+                                style={{marginTop:8,background:'#3D7C3D',color:'#fff',padding:'8px 16px',borderRadius:10,fontSize:13,fontWeight:700,width:'100%'}}>
+                          🎁 받기 (🫘 {item.beans}개 사용)
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                  {!hasPrice && !isEditing && (
+                    <div className="reward-need">
+                      {readonly
+                        ? <span style={{color:'#94806B'}}>가격 정해지면 알려줄게! ⏳</span>
+                        : <span style={{color:'#C75D2C'}}>가격 설정 필요</span>}
+                    </div>
+                  )}
+
+                  {isEditing && (
+                    <div style={{display:'flex',gap:6,marginTop:4,alignItems:'center'}}>
+                      <span style={{fontSize:12}}>🫘</span>
+                      <input type="tel" inputMode="numeric" pattern="[0-9]*"
+                             className="form-input" style={{flex:1,padding:'6px 10px',fontSize:13}}
+                             value={editPrice}
+                             onChange={(e) => setEditPrice(e.target.value.replace(/[^0-9]/g,''))}
+                             placeholder="콩알 개수"
+                             autoFocus/>
+                      <button onClick={() => savePrice(item)}
+                              style={{background:'#3D7C3D',color:'#fff',padding:'6px 12px',borderRadius:8,fontSize:12,fontWeight:700}}>저장</button>
+                      <button onClick={() => { setEditingId(null); setEditPrice(''); }}
+                              style={{background:'#E0D8C8',color:'#5A4A3A',padding:'6px 10px',borderRadius:8,fontSize:12}}>취소</button>
+                    </div>
+                  )}
+
+                  {/* 부모 모드 - 위시만 편집 가능 (built-in 보상은 코드에서 정의됨) */}
+                  {!readonly && !item.isBuiltIn && !isEditing && (
+                    <div style={{display:'flex',gap:6,marginTop:6}}>
+                      <button onClick={() => startEditPrice(item)}
+                              style={{fontSize:11,padding:'4px 10px',borderRadius:8,background:'#FFE4D6',color:'#C75D2C',fontWeight:600}}>
+                        💰 가격 {hasPrice ? '수정' : '설정'}
+                      </button>
+                      <button onClick={() => deleteWish(item.id)}
+                              style={{fontSize:11,padding:'4px 10px',borderRadius:8,background:'#FCE4D6',color:'#C4654D',fontWeight:600}}>
+                        🗑 삭제
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {allItems.length === REWARDS.length && (
+            <div style={{textAlign:'center',color:'#94806B',fontSize:12,padding:'12px 0'}}>
+              {readonly ? '받고 싶은 거 아래에 적어봐! 👇' : '아이가 추가한 위시가 아직 없어요'}
+            </div>
+          )}
+        </div>
+
+        {/* 새 위시 입력 (모두에게 열려있음 - 아이가 적고 부모가 가격 설정) */}
+        <div className="wish-add">
+          <div className="wish-add-lbl">{readonly ? '🎁 받고 싶은 거 적어줘!' : '🎁 위시 추가 (가격은 따로 설정)'}</div>
+          <div style={{display:'flex',gap:6}}>
+            <input type="text" className="form-input" style={{flex:1,padding:'10px 12px',fontSize:14}}
+                   value={newName}
+                   onChange={(e) => setNewName(e.target.value)}
+                   placeholder="예: 아이폰19, 게임팩…"
+                   maxLength={30}/>
+            <button onClick={addWish} disabled={!newName.trim()}
+                    style={{background:newName.trim()?'#FFB85C':'#E0D8C8',color:'#fff',padding:'0 16px',borderRadius:10,fontSize:14,fontWeight:700}}>
+              추가
+            </button>
+          </div>
+          {readonly && (
+            <div style={{fontSize:11,color:'#94806B',marginTop:6,textAlign:'center'}}>
+              엄마/아빠가 콩알 가격을 정해주실 거야 ⏳
+            </div>
+          )}
+        </div>
+
+        {/* 부모 모드: 콩알 수동 조정 */}
+        {!readonly && <BeanAdjuster currentBeans={currentBeans} onAdjusted={refreshLedger}/>}
+
+        {/* 받은 기록 (ledger) */}
+        {ledger.length > 0 && (
+          <div className="ledger-section">
+            <div className="ledger-title">🎁 받은 기록 ({ledger.length})</div>
+            <div className="ledger-list">
+              {ledger.slice(0, readonly ? 5 : 20).map((e) => (
+                <div key={e.id} className="ledger-item">
+                  <div className="ledger-info">
+                    <div className="ledger-reason">{e.reason}</div>
+                    <div className="ledger-meta">
+                      🫘 {Math.abs(e.beans)}개 · {new Date(e.ts).toLocaleDateString('ko-KR', {month:'numeric',day:'numeric'})}
+                    </div>
+                  </div>
+                  {!readonly && (
+                    <button onClick={() => undoClaim(e.id)}
+                            style={{fontSize:11,padding:'4px 8px',borderRadius:8,background:'#FCE4D6',color:'#C4654D',fontWeight:600}}>
+                      ↶ 되돌리기
+                    </button>
+                  )}
+                </div>
+              ))}
+              {readonly && ledger.length > 5 && (
+                <div style={{fontSize:11,color:'#94806B',textAlign:'center',padding:'4px 0'}}>
+                  ... {ledger.length - 5}개 더 (부모 모드에서 전체 보기)
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <button className="bean-close" onClick={onClose}>닫기</button>
+      </div>
+
+      {/* 받기 확인 모달 */}
+      {claimConfirm && (
+        <div className="bean-overlay" onClick={() => setClaimConfirm(null)} style={{zIndex:300}}>
+          <div className="bean-modal" onClick={(e) => e.stopPropagation()} style={{maxWidth:300}}>
+            <div className="bean-big">🎁</div>
+            <div className="bean-title">정말 받을 거야?</div>
+            <div className="bean-msg" style={{marginTop:10}}>
+              <strong>{claimConfirm.name}</strong>
+              <br/>
+              🫘 {claimConfirm.beans}개 사용
+            </div>
+            <div style={{display:'flex',gap:8,marginTop:14}}>
+              <button onClick={() => setClaimConfirm(null)}
+                      style={{flex:1,background:'#E0D8C8',color:'#5A4A3A',padding:'10px',borderRadius:10,fontSize:14,fontWeight:600}}>
+                취소
+              </button>
+              <button onClick={confirmClaim}
+                      style={{flex:1,background:'#3D7C3D',color:'#fff',padding:'10px',borderRadius:10,fontSize:14,fontWeight:700}}>
+                받기 ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// 월간 캘린더 - 날짜별 점수/콩알 시각화
+// ============================================================
+function MonthCalendar({ today }) {
+  const todayDate = new Date(today + 'T00:00:00');
+  const [viewYM, setViewYM] = useState(() => ({ y: todayDate.getFullYear(), m: todayDate.getMonth() })); // m: 0-11
+  const [selectedDate, setSelectedDate] = useState(null);
+
+  // 해당 월 데이터 로드
+  const monthData = useMemo(() => {
+    const data = {};
+    const ym = `${viewYM.y}-${String(viewYM.m + 1).padStart(2, '0')}`;
+    ls.keys('daily:').forEach(k => {
+      const dk = k.replace('daily:', '');
+      if (dk.startsWith(ym)) {
+        const d = ls.get(k);
+        if (d) data[dk] = d;
+      }
+    });
+    return data;
+  }, [viewYM]);
+
+  // 해당 월 정보
+  const firstDay = new Date(viewYM.y, viewYM.m, 1);
+  const lastDay = new Date(viewYM.y, viewYM.m + 1, 0);
+  const daysInMonth = lastDay.getDate();
+  const startWeekday = firstDay.getDay(); // 0:일 ~ 6:토
+
+  // 셀 생성 (7x6 = 42칸)
+  const cells = [];
+  for (let i = 0; i < startWeekday; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length < 42) cells.push(null);
+
+  const prevMonth = () => {
+    setViewYM(({ y, m }) => m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 });
+  };
+  const nextMonth = () => {
+    setViewYM(({ y, m }) => m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 });
+  };
+
+  const todayKeyStr = today;
+  const formatKey = (d) => `${viewYM.y}-${String(viewYM.m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const isFuture = (d) => formatKey(d) > todayKeyStr;
+
+  const handleCellClick = (d) => {
+    if (!d || isFuture(d)) return;
+    const key = formatKey(d);
+    const dayData = monthData[key];
+    if (!dayData) return;
+    setSelectedDate({ key, data: dayData });
+  };
+
+  // 점수에 따른 색상 (낮음: 옅음 → 높음: 짙음)
+  const scoreColor = (sc) => {
+    if (sc >= 100) return '#E89A0F';  // 콩알 4개 (가장 진함)
+    if (sc >= 95)  return '#F4C13D';  // 콩알 2개
+    if (sc >= 85)  return '#FFD580';  // 콩알 1개
+    if (sc >= 60)  return '#FFE8B8';
+    if (sc >= 30)  return '#FFF1B8';
+    if (sc > 0)    return '#FFF8E7';
+    return '#fff';
+  };
+
+  const weekdayLbls = ['일','월','화','수','목','금','토'];
+
+  return (
+    <div className="mission">
+      <div className="mission-head">
+        <span className="mission-emoji">📅</span>
+        <span className="mission-title">{viewYM.y}년 {viewYM.m + 1}월</span>
+        <button className="cal-nav-btn" onClick={prevMonth}>‹</button>
+        <button className="cal-nav-btn" onClick={nextMonth}>›</button>
+      </div>
+      <div className="mission-sub">날짜를 누르면 그날 점수와 콩알을 볼 수 있어!</div>
+
+      <div className="cal-weekdays">
+        {weekdayLbls.map((lbl, i) => (
+          <div key={i} className={`cal-weekday ${i === 0 ? 'sun' : ''} ${i === 6 ? 'sat' : ''}`}>{lbl}</div>
+        ))}
+      </div>
+
+      <div className="cal-grid">
+        {cells.map((d, idx) => {
+          if (d == null) return <div key={idx} className="cal-cell empty"></div>;
+          const key = formatKey(d);
+          const dayData = monthData[key];
+          const sc = dayData ? calcScore(dayData, key) : 0;
+          const bn = dayData ? calcBestBeans(dayData, key) : 0;
+          const future = isFuture(d);
+          const isToday = key === todayKeyStr;
+          const hasData = !!dayData;
+          return (
+            <button key={idx}
+                    className={`cal-cell ${hasData ? 'has' : ''} ${future ? 'future' : ''} ${isToday ? 'today' : ''}`}
+                    style={{background: hasData ? scoreColor(sc) : undefined}}
+                    onClick={() => handleCellClick(d)}
+                    disabled={future || !hasData}>
+              <span className="cal-day-num">{d}</span>
+              {hasData && (
+                <span className="cal-day-info">
+                  {bn > 0 && <span className="cal-bean">{bn === 4 ? '🫘×4' : bn === 2 ? '🫘🫘' : '🫘'}</span>}
+                  <span className="cal-score">{sc}</span>
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 날짜 상세 모달 */}
+      {selectedDate && (
+        <DayDetailModal date={selectedDate.key} data={selectedDate.data}
+                        onClose={() => setSelectedDate(null)} />
+      )}
+    </div>
+  );
+}
+
+// 그날의 상세 보기 모달
+function DayDetailModal({ date, data, onClose }) {
+  const sc = calcScore(data, date);
+  const bn = calcBestBeans(data, date);
+  const sleepH = calcSleep(data.bedtime, data.wakeup);
+  const mainMeals = ['breakfast','lunch','dinner'].filter(k => data.meals?.[k]).length;
+  const fastMeals = ['breakfast','dinner'].filter(k => data.meals?.[k] === 2).length;
+  const mathP = data.homework?.math || 0;
+  const drawing = !!data.homework?.drawing;
+  const elementary = !!data.homework?.elementary;
+  const english = !!data.homework?.english;
+  const clss = getClassesForDay(date);
+  const classDone = clss.filter(c => data.classes?.[c]).length;
+  const exDone = Object.keys(data.exercises || {}).filter(k => data.exercises[k]).length;
+  const routineDone = ROUTINES.filter(r => data.routines?.[r.key]).length;
+  const eveDone = EVENING_ROUTINES.filter(r => data.eveningRoutines?.[r.key]).length;
+  const milk = data.milk || 0;
+  const eggs = data.eggs || 0;
+  const protein = data.protein || 0;
+
+  // 날짜 표시
+  const dt = new Date(date + 'T00:00:00');
+  const dayNames = ['일','월','화','수','목','금','토'];
+  const dateLabel = `${dt.getMonth() + 1}월 ${dt.getDate()}일 (${dayNames[dt.getDay()]})`;
+
+  return (
+    <div className="bean-overlay" onClick={onClose}>
+      <div className="bean-modal day-detail-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="day-detail-date">{dateLabel}</div>
+        <div className="day-detail-score">
+          <span style={{fontFamily:"'Fraunces',serif",fontSize:48,fontWeight:600,color:'#2D3748'}}>{sc}</span>
+          <span style={{fontSize:14,color:'#94806B',marginLeft:6}}>점</span>
+        </div>
+        {bn > 0 && (
+          <div className="day-detail-beans">
+            {bn === 4 ? '🫘×4 콩알 4개' : bn === 2 ? '🫘🫘 콩알 2개' : '🫘 콩알 1개'} 받은 날!
+          </div>
+        )}
+
+        <div className="day-summary">
+          <div className="day-row">
+            <span className="day-row-lbl">😴 잠</span>
+            <span className="day-row-val">{sleepH != null ? `${sleepH.toFixed(1)}시간` : '기록 없음'}</span>
+          </div>
+          <div className="day-row">
+            <span className="day-row-lbl">🌅 아침 루틴</span>
+            <span className="day-row-val">{routineDone}/{ROUTINES.length}</span>
+          </div>
+          <div className="day-row">
+            <span className="day-row-lbl">🍽️ 식사</span>
+            <span className="day-row-val">{mainMeals}/3끼 {fastMeals > 0 && `· ⚡${fastMeals}`}</span>
+          </div>
+          <div className="day-row">
+            <span className="day-row-lbl">🎒 학원</span>
+            <span className="day-row-val">{clss.length === 0 ? '학원 없는 날' : `${classDone}/${clss.length}`}</span>
+          </div>
+          <div className="day-row">
+            <span className="day-row-lbl">📐 숙제</span>
+            <span className="day-row-val">
+              수학 {mathP}쪽
+              {drawing && ' · 그림✓'}
+              {elementary && ' · 엘리하이✓'}
+              {english && ' · 영어✓'}
+            </span>
+          </div>
+          <div className="day-row">
+            <span className="day-row-lbl">💪 운동</span>
+            <span className="day-row-val">{exDone > 0 ? `${exDone}개` : '안 함'}</span>
+          </div>
+          {(milk > 0 || eggs > 0 || protein > 0) && (
+            <div className="day-row">
+              <span className="day-row-lbl">🥛 단백질</span>
+              <span className="day-row-val">
+                {milk > 0 && `우유 ${milk} `}
+                {eggs > 0 && `🥚 ${eggs} `}
+                {protein > 0 && `💪 ${protein}`}
+              </span>
+            </div>
+          )}
+          <div className="day-row">
+            <span className="day-row-lbl">🌙 자기 전</span>
+            <span className="day-row-val">{eveDone}/{EVENING_ROUTINES.length}</span>
+          </div>
+        </div>
+
+        <button className="bean-close" onClick={onClose}>닫기</button>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, unit, target, good }) {
+  return (
+    <div className="stat-card">
+      <div className="stat-lbl">{label}</div>
+      <div className="stat-val-row">
+        <span className="stat-val">{value}</span>
+        <span className="stat-unit">{unit}</span>
+      </div>
+      <div className="stat-tgt" style={{color: good ? '#2D5F4F' : '#A89B7A'}}>목표 {target}</div>
+    </div>
+  );
+}
+
+function MonthlyTab({ showToast }) {
+  const loadMonthly = () => {
+    const keys = ls.keys('monthly:');
+    const records = keys.map(k => ls.get(k)).filter(Boolean);
+    if (!records.find(r => r.date === '2026-05-06')) {
+      records.push({ date: '2026-05-06', height: 141.6, weight: 35.5 });
+      ls.set('monthly:2026-05-06', { date: '2026-05-06', height: 141.6, weight: 35.5 });
+    }
+    records.sort((a, b) => a.date.localeCompare(b.date));
+    return records;
+  };
+
+  const [records, setRecords] = useState(loadMonthly);
+  const [showForm, setShowForm] = useState(false);
+  const [newDate, setNewDate] = useState(todayKey());
+  const [newH, setNewH] = useState('');
+  const [newW, setNewW] = useState('');
+
+  const TARGET_H = 174.5, STD_W = 44.0;
+  const latest = records[records.length - 1];
+
+  const addRecord = () => {
+    const h = parseFloat(newH), w = parseFloat(newW);
+    if (!newDate || isNaN(h) || isNaN(w)) { showToast('값을 모두 입력해주세요'); return; }
+    const r = { date: newDate, height: h, weight: w };
+    ls.set(`monthly:${newDate}`, r);
+    const next = [...records.filter(x => x.date !== newDate), r].sort((a, b) => a.date.localeCompare(b.date));
+    setRecords(next);
+    setNewH(''); setNewW(''); setShowForm(false);
+    showToast('저장되었습니다');
+  };
+
+  const del = (date) => {
+    if (date === '2026-05-06') { showToast('기준값은 삭제할 수 없습니다'); return; }
+    if (!confirm(`${date} 기록을 삭제할까요?`)) return;
+    ls.remove(`monthly:${date}`);
+    setRecords(records.filter(r => r.date !== date));
+  };
+
+  const chart = records.map(r => ({
+    date: `${new Date(r.date).getMonth()+1}/${new Date(r.date).getDate()}`,
+    키: r.height, 체중: r.weight,
+  }));
+
+  return (
+    <div>
+      {latest && (
+        <div className="summary-card">
+          <div className="summary-row">
+            <div>
+              <div className="summary-lbl"><span>📏</span><span>현재 키</span></div>
+              <div className="summary-val-row">
+                <span className="summary-val">{latest.height.toFixed(1)}</span>
+                <span className="summary-unit">cm</span>
+              </div>
+              <div className="summary-tgt">목표 {TARGET_H} cm</div>
+              <div className="progress-track">
+                <div className="progress-fill" style={{width:`${Math.min(100,(latest.height/TARGET_H)*100)}%`}}></div>
+              </div>
+            </div>
+            <div>
+              <div className="summary-lbl"><span>⚖️</span><span>현재 체중</span></div>
+              <div className="summary-val-row">
+                <span className="summary-val">{latest.weight.toFixed(1)}</span>
+                <span className="summary-unit">kg</span>
+              </div>
+              <div className="summary-tgt">목표 {STD_W} kg</div>
+              <div className="progress-track">
+                <div className="progress-fill" style={{width:`${Math.min(100,(latest.weight/STD_W)*100)}%`}}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {chart.length >= 2 && (
+        <div className="card">
+          <div className="card-head"><span className="card-title">키 / 체중 추이</span></div>
+          <div style={{height:220,marginTop:8}}>
+            <R.ResponsiveContainer>
+              <R.LineChart data={chart} margin={{top:10,right:10,bottom:0,left:-10}}>
+                <R.CartesianGrid strokeDasharray="2 4" stroke="#E8E3D6" vertical={false}/>
+                <R.XAxis dataKey="date" tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false}/>
+                <R.YAxis yAxisId="left" tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false} domain={['dataMin - 2','dataMax + 2']}/>
+                <R.YAxis yAxisId="right" orientation="right" tick={{fontSize:11,fill:'#6B6759'}} axisLine={false} tickLine={false} domain={['dataMin - 2','dataMax + 2']}/>
+                <R.Tooltip contentStyle={{borderRadius:8,fontSize:12,border:'1px solid #E8E3D6'}}/>
+                <R.Line yAxisId="left" type="monotone" dataKey="키" stroke="#2D5F4F" strokeWidth={2.5} dot={{r:4}}/>
+                <R.Line yAxisId="right" type="monotone" dataKey="체중" stroke="#C4654D" strokeWidth={2.5} dot={{r:4}}/>
+              </R.LineChart>
+            </R.ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      <div className="card">
+        <div className="card-head">
+          <span className="card-title">기록 ({records.length}건)</span>
+          {!showForm && <button className="btn-add" onClick={() => setShowForm(true)}>+ 추가</button>}
+        </div>
+        {showForm && (
+          <div className="form-box">
+            <div className="form-row">
+              <label className="form-lbl">날짜</label>
+              <input type="date" className="form-input" value={newDate} onChange={(e) => setNewDate(e.target.value)}/>
+            </div>
+            <div className="form-row">
+              <label className="form-lbl">키 (cm)</label>
+              <input type="number" step="0.1" className="form-input" placeholder="141.6" value={newH} onChange={(e) => setNewH(e.target.value)}/>
+            </div>
+            <div className="form-row">
+              <label className="form-lbl">체중 (kg)</label>
+              <input type="number" step="0.1" className="form-input" placeholder="35.5" value={newW} onChange={(e) => setNewW(e.target.value)}/>
+            </div>
+            <div className="form-actions">
+              <button className="btn-cancel" onClick={() => setShowForm(false)}>취소</button>
+              <button className="btn-save" onClick={addRecord}>저장</button>
+            </div>
+          </div>
+        )}
+        <div className="record-list">
+          {[...records].reverse().map(r => {
+            const bmi = (r.weight / ((r.height/100)**2)).toFixed(1);
+            return (
+              <div key={r.date} className="record-row">
+                <div className="record-date">{r.date}</div>
+                <div className="record-vals">
+                  <span className="record-val">{r.height.toFixed(1)} cm</span>
+                  <span className="record-sep">·</span>
+                  <span className="record-val">{r.weight.toFixed(1)} kg</span>
+                  <span className="record-sep">·</span>
+                  <span className="record-muted">BMI {bmi}</span>
+                </div>
+                {r.date !== '2026-05-06' && <button className="del-btn" onClick={() => del(r.date)}>×</button>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BackupTab({ showToast }) {
+  const exportData = () => {
+    const all = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('daily:') || k.startsWith('monthly:') || k.startsWith('meta:'))) {
+        all[k] = localStorage.getItem(k);
+      }
+    }
+    const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `juwan-growth-${todayKey()}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('파일 저장 완료');
+  };
+
+  const importData = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const obj = JSON.parse(ev.target.result);
+        let count = 0;
+        Object.entries(obj).forEach(([k, v]) => {
+          if (typeof k === 'string' && (k.startsWith('daily:') || k.startsWith('monthly:') || k.startsWith('meta:'))) {
+            localStorage.setItem(k, v); count++;
+          }
+        });
+        showToast(`${count}건 복원 완료`);
+        setTimeout(() => location.reload(), 800);
+      } catch { showToast('파일 형식 오류'); }
+    };
+    reader.readAsText(file);
+  };
+
+  const reset = () => {
+    if (!confirm('모든 기록을 삭제할까요? 콩알도 사라집니다.')) return;
+    if (!confirm('정말로요?')) return;
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('daily:') || k.startsWith('monthly:') || k.startsWith('meta:'))) keys.push(k);
+    }
+    keys.forEach(k => localStorage.removeItem(k));
+    showToast('초기화 완료');
+    setTimeout(() => location.reload(), 600);
+  };
+
+  const beans = countBeans();
+
+  const forceSync = async () => {
+    showToast('동기화 시작...');
+    await pushToServer();
+    await pullFromServer();
+    showToast('동기화 완료!');
+    setTimeout(() => location.reload(), 600);
+  };
+
+  return (
+    <div>
+      <div className="backup-card">
+        <div className="backup-head">
+          <span className="backup-icon">☁️</span>
+          <span className="backup-title">클라우드 동기화</span>
+        </div>
+        <div className="backup-desc">
+          모든 폰의 데이터가 자동으로 동기화됩니다. 데이터 변경 후 1~2초 내 서버에 저장되고,
+          다른 폰에서는 30초 이내에 자동 반영됩니다 (또는 앱을 다시 켤 때 즉시).
+        </div>
+        <button className="backup-btn btn-export" onClick={forceSync}>🔄 지금 동기화</button>
+      </div>
+      <div className="backup-card">
+        <div className="backup-head">
+          <span className="backup-icon">🫘</span>
+          <span className="backup-title">모은 콩알</span>
+        </div>
+        <div className="backup-desc">
+          현재까지 모은 콩알: <strong style={{color:'#B8860B',fontSize:18}}>{beans}개</strong>
+        </div>
+      </div>
+      <div className="backup-card">
+        <div className="backup-head">
+          <span className="backup-icon">📊</span>
+          <span className="backup-title">현재 저장된 데이터</span>
+        </div>
+        <div className="backup-desc">
+          일일 기록 {ls.keys('daily:').length}건 · 신체 측정 {ls.keys('monthly:').length}건
+        </div>
+      </div>
+      <div className="backup-card">
+        <div className="backup-head">
+          <span className="backup-icon">💾</span>
+          <span className="backup-title">데이터 내보내기</span>
+        </div>
+        <div className="backup-desc">JSON 파일로 저장합니다. 카톡으로 보내고 다른 폰에서 가져오기로 동기화 가능.</div>
+        <button className="backup-btn btn-export" onClick={exportData}>📤 JSON으로 내보내기</button>
+      </div>
+      <div className="backup-card">
+        <div className="backup-head">
+          <span className="backup-icon">📥</span>
+          <span className="backup-title">데이터 가져오기</span>
+        </div>
+        <div className="backup-desc">JSON 파일을 불러옵니다. 같은 날짜는 덮어쓰여요.</div>
+        <label className="backup-btn btn-import">
+          📁 파일 선택
+          <input type="file" accept="application/json,.json" style={{display:'none'}} onChange={importData}/>
+        </label>
+      </div>
+      <div className="backup-card">
+        <div className="backup-head">
+          <span className="backup-icon">⚠️</span>
+          <span className="backup-title">초기화</span>
+        </div>
+        <div className="backup-desc">모든 기록과 콩알을 삭제합니다. 먼저 내보내기 권장.</div>
+        <button className="backup-btn btn-danger" onClick={reset}>전체 데이터 삭제</button>
+      </div>
+    </div>
+  );
+}
+
+// 전역 에러 캐치 - 빈 화면 대신 디버깅 정보 표시
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null, info: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  componentDidCatch(error, info) {
+    console.error('App crashed:', error, info);
+    this.setState({ error, info });
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{padding:20,fontFamily:'sans-serif',color:'#2D3748',maxWidth:600,margin:'40px auto'}}>
+          <h2 style={{color:'#C4654D'}}>⚠️ 앱 로드 중 에러가 발생했어요</h2>
+          <p style={{fontSize:14,color:'#5A4A3A',marginTop:8}}>아래 메시지를 캡처해서 알려주세요.</p>
+          <div style={{background:'#FCE4D6',padding:12,borderRadius:8,marginTop:12,fontSize:13,wordBreak:'break-word',fontFamily:'monospace'}}>
+            <strong>{this.state.error.toString()}</strong>
+            {this.state.info && (
+              <pre style={{whiteSpace:'pre-wrap',fontSize:11,marginTop:8}}>
+                {this.state.info.componentStack}
+              </pre>
+            )}
+          </div>
+          <button onClick={() => {
+                    try { localStorage.removeItem('migrated:force-beans-14'); } catch {}
+                    location.reload();
+                  }}
+                  style={{marginTop:14,background:'#FFB85C',color:'#fff',padding:'10px 18px',borderRadius:10,border:'none',fontSize:14,fontWeight:600,cursor:'pointer'}}>
+            🔄 다시 시도
+          </button>
+          <div style={{marginTop:14,fontSize:11,color:'#94806B'}}>
+            데이터는 안전합니다. 클라우드에 저장돼 있어요.
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <ErrorBoundary><App /></ErrorBoundary>
+);
+</script>
+</body>
+</html>@keyframes spin{0%{transform:rotate(0) scale(0.5)}50%{transform:rotate(180deg) scale(1.2)}100%{transform:rotate(360deg) scale(1)}}
 .bean-title{font-family:'Fraunces',serif;font-size:24px;font-weight:600;color:#B8860B;margin-bottom:6px}
 .bean-msg{font-size:14px;color:#5A4A3A;margin-bottom:20px}
 .bean-count-big{font-family:'Fraunces',serif;font-size:36px;font-weight:600;color:#B8860B;font-variant-numeric:tabular-nums}
